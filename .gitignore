@@ -1,0 +1,7 @@
+build/
+data/
+_tools/
+*.exe
+*.o
+*.obj
+__pycache__/
