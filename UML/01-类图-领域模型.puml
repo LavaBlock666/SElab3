@@ -1,0 +1,130 @@
+@startuml
+!pragma layout elk
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 150
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.2
+skinparam classBorderColor #94A3B8
+skinparam classBackgroundColor #FFFFFF
+skinparam classHeaderBackgroundColor #E8EEF9
+skinparam classFontStyle bold
+skinparam classAttributeFontSize 11
+skinparam classFontSize 12
+hide circle
+skinparam classAttributeIconSize 0
+top to bottom direction
+
+class User {
+  - id: string
+  - email: string
+  - phone: string
+  - password_hash: string
+  - salt: string
+  - roles: set<Role>
+  - status: UserStatus
+  - failed_attempts: int
+  - lock_until: Timestamp
+  + HasRole(Role): bool
+  + IsLocked(Timestamp): bool
+}
+
+enum Role {
+  Buyer
+  Seller
+  Admin
+}
+
+class Category {
+  - id: string
+  - name: string
+}
+
+class Item {
+  - id: string
+  - seller_id: string
+  - category_id: string
+  - title: string
+  - description: string
+  - price: Money
+  - status: ItemStatus
+  - view_count: int
+  - reject_reason: string
+  - created_at: Timestamp
+}
+
+enum ItemStatus {
+  Draft
+  Pending
+  Published
+  Reserved
+  Confirmed
+  Completed
+  Offline
+}
+
+class Reservation {
+  - id: string
+  - item_id: string
+  - buyer_id: string
+  - status: ReservationStatus
+  - request_id: string
+  - created_at: Timestamp
+}
+
+enum ReservationStatus {
+  Pending
+  Confirmed
+  Completed
+  Canceled
+  Voided
+}
+
+class Report {
+  - id: string
+  - item_id: string
+  - reporter_id: string
+  - reason: ReportReason
+  - description: string
+  - status: ReportStatus
+  - handler_id: string
+}
+
+enum ReportStatus {
+  Pending
+  Upheld
+  Rejected
+}
+
+class OperationLog {
+  - id: string
+  - operator_id: string
+  - action: string
+  - target_type: string
+  - target_id: string
+  - detail: string
+}
+
+class Notification {
+  - id: string
+  - user_id: string
+  - type: string
+  - content: string
+  - read: bool
+}
+
+User "1" -- "1..*" Role : roles >
+User "1" -- "0..*" Item : seller >
+Category "1" -- "0..*" Item : category >
+User "1" -- "0..*" Reservation : buyer >
+Item "1" -- "0..1" Reservation : active >
+User "1" -- "0..*" Report : reporter >
+Item "1" -- "0..*" Report : reported >
+User "1" -- "0..*" OperationLog : operator >
+User "1" -- "0..*" Notification : 接收 >
+Item ..> ItemStatus
+Reservation ..> ReservationStatus
+Report ..> ReportStatus
+@enduml

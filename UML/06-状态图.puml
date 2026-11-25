@@ -1,0 +1,46 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 150
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #4B5563
+skinparam stateBorderColor #64748B
+skinparam stateBackgroundColor #F8FAFC
+skinparam stateFontSize 13
+
+state "草稿" as Draft
+state "待审核" as Pending
+state "已发布" as Published
+state "已预约" as Reserved
+state "已确认" as Confirmed
+state "已完成" as Finished
+state "已下架" as Offline
+
+[*] --> Draft : 卖家创建商品
+Draft --> Pending : 提交审核
+Pending --> Published : 审核通过
+Pending --> Draft : 驳回（理由必填）
+Published --> Reserved : 买家预约
+Published --> Pending : 修改价格
+Published --> Offline : 卖家下架
+Reserved --> Published : 买家取消预约
+Reserved --> Confirmed : 卖家确认
+Reserved --> Offline : 下架 / 举报成立\n（有效预约作废）
+Confirmed --> Finished : 买家确认完成
+Finished --> [*]
+Offline --> [*]
+
+note right of Offline
+  终态：再次出售需重新
+  发布商品。
+end note
+
+note left of Confirmed
+  禁止：买家取消预约
+——卖家确认后交易锁定。
+end note
+@enduml
+
+

@@ -1,0 +1,43 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 140
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #4B5563
+skinparam activityBorderColor #64748B
+skinparam activityBackgroundColor #F8FAFC
+skinparam activityDiamondBackgroundColor #FFFFFF
+skinparam swimlaneBorderColor #94A3B8
+skinparam swimlaneTitleBackgroundColor #F1F5FB
+
+|买家|
+start
+:打开商品详情;
+:点击「预约」;
+|系统|
+:校验登录状态与商品当前状态;
+if (商品可预约？) then (否)
+  :提示「已被预约 / 当前状态不可预约」;
+  stop
+else (是)
+  :创建预约记录（待确认）;
+  :商品转为「已预约」;
+  |卖家|
+  :收到预约通知;
+  |系统|
+  :等待卖家确认或买家取消;
+  if (卖家确认交易？) then (确认)
+    :预约与商品转为「已确认」;
+    |买家|
+    :线下交付;
+    :确认完成;
+    |系统|
+    :商品与预约转为「已完成」;
+    stop
+  else (买家取消)
+    :预约作废，商品恢复「已发布」;
+    stop
+  endif
+endif
+@enduml

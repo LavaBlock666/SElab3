@@ -1,0 +1,58 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 140
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #4B5563
+skinparam usecaseBorderColor #94A3B8
+skinparam usecaseBackgroundColor #F8FAFC
+skinparam actorBorderColor #4B5563
+left to right direction
+
+actor 游客 as Guest
+actor 买家 as Buyer
+actor 卖家 as Seller
+actor 管理员 as Admin
+
+rectangle "校园二手交易系统" {
+  usecase 浏览商品 as UC1
+  usecase 检索商品 as UC2
+  usecase 注册登录 as UC3
+  usecase 预约商品 as UC4
+  usecase 取消预约 as UC5
+  usecase 确认完成 as UC6
+  usecase 举报商品 as UC7
+  usecase 发布商品 as UC8
+  usecase 管理在售商品 as UC9
+  usecase 确认交易 as UC10
+  usecase 审核商品 as UC11
+  usecase 处理举报 as UC12
+  usecase 查询操作日志 as UC13
+  usecase 查看统计 as UC14
+  usecase 校验商品状态 as UC15
+  usecase 下架商品 as UC16
+}
+
+Guest --> UC1
+Guest --> UC2
+Guest --> UC3
+Buyer --> UC2
+Buyer --> UC4
+Buyer --> UC5
+Buyer --> UC6
+Buyer --> UC7
+Seller --> UC8
+Seller --> UC9
+Seller --> UC10
+Seller --> UC7
+Admin --> UC11
+Admin --> UC12
+Admin --> UC13
+Admin --> UC14
+
+UC4 ..> UC15 : <<include>>
+UC12 ..> UC16 : <<include>>
+@enduml
+

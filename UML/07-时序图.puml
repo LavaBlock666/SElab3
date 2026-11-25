@@ -1,0 +1,47 @@
+@startuml
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 140
+skinparam shadowing false
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowColor #4B5563
+skinparam sequenceLifeLineBorderColor #94A3B8
+skinparam sequenceParticipantBackgroundColor #F1F5FB
+skinparam sequenceParticipantBorderColor #94A3B8
+skinparam sequenceGroupBackgroundColor #FBFCFE
+skinparam sequenceGroupBorderColor #94A3B8
+skinparam noteBackgroundColor #FFF8E1
+skinparam noteBorderColor #D6C68A
+
+actor 买家A as A
+actor 买家B as B
+participant "前端页面" as FE
+participant "预约应用服务" as RS
+participant "预约仓储" as Repo
+database "MySQL" as DB
+
+A -> FE : 打开商品详情
+B -> FE : 打开商品详情
+A -> FE : 点击「预约」
+B -> FE : 点击「预约」
+FE -> RS : POST /api/reservations\n{商品编号, 请求号}
+RS -> Repo : 查询商品并加行锁
+Repo -> DB : SELECT ... FOR UPDATE
+DB --> Repo : 商品状态 = 已发布
+Repo --> RS : 商品
+RS -> RS : 校验：非本人商品、状态可预约、当前无有效预约
+RS -> Repo : 新增预约（待确认）
+Repo -> DB : INSERT 预约\nactive_item_id 唯一索引
+alt 插入成功
+  DB --> Repo : 1 行
+  Repo -> DB : UPDATE 商品 SET 状态 = 已预约
+  RS --> FE : 201 预约成功
+  FE --> A : 提示「预约成功，等待卖家确认」
+else 触发唯一索引冲突
+  DB --> Repo : Duplicate Key
+  Repo --> RS : 冲突异常
+  RS --> FE : 409 已被预约
+  FE --> B : 提示「该商品已被预约」
+end
+note over RS : 同一请求号重发时\n直接返回首次结果，不新增记录
+note over DB : 预约与商品状态\n在同一事务内更新
+@enduml

@@ -1,0 +1,47 @@
+@startuml
+!pragma layout elk
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 150
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.2
+skinparam packageBorderColor #94A3B8
+skinparam packageBackgroundColor #F8FAFC
+skinparam componentBackgroundColor #FFFFFF
+skinparam componentStyle rectangle
+top to bottom direction
+
+package "界面层" as UI {
+  [ConsoleUI\n（菜单 / 输入校验）]
+}
+
+package "应用服务层" as APP {
+  [UserService]
+  [ItemService]
+  [SearchService]
+  [ReservationService]
+  [ReportService]
+  [LogService]
+  [StatsService]
+}
+
+package "仓储层" as REPO {
+  [Repository接口\nIUser / IItem / IReservation\nIReport / ILog / ICategory\nINotification]
+  [File*Repository\n（文件持久化实现）]
+}
+
+package "基础设施" as INFRA {
+  [FnvPasswordHasher]
+  [SequenceIdGenerator]
+  [IClock / SystemClock / FakeClock]
+  [Table<T>\n0x1f 分隔文本表]
+}
+
+UI --> APP : 调用服务
+APP ..> REPO : 依赖接口
+[File*Repository\n（文件持久化实现）] ..|> [Repository接口\nIUser / IItem / IReservation\nIReport / ILog / ICategory\nINotification]
+[File*Repository\n（文件持久化实现）] --> [Table<T>\n0x1f 分隔文本表]
+APP ..> INFRA : 哈希 / 编号 / 时间
+@enduml

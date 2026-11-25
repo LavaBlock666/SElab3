@@ -1,0 +1,36 @@
+@startuml
+!pragma layout smetana
+skinparam defaultFontName "Microsoft YaHei"
+skinparam dpi 160
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam backgroundColor #FFFFFF
+skinparam ArrowColor #4B5563
+skinparam ArrowThickness 1.4
+skinparam packageBorderColor #94A3B8
+skinparam packageBackgroundColor #F8FAFC
+skinparam componentBackgroundColor #FFFFFF
+skinparam componentStyle rectangle
+top to bottom direction
+
+package "表现层（控制台）" as UI {
+  [ConsoleUI\n游客 / 买家 / 卖家 / 管理员 四类工作台]
+}
+
+package "应用服务层" as APP {
+  [UserService · ItemService · SearchService\nReservationService · ReportService\nLogService · StatsService]
+}
+
+package "领域模型" as DOM {
+  [User · Item · Reservation · Report\nOperationLog · Notification\n状态机 CanTransition() · 错误码 DomainError]
+}
+
+package "仓储与基础设施" as INFRA {
+  [Repository 接口 + File* 实现\nTable<T> 文本持久化\n密码哈希 · 编号生成 · 时钟]
+}
+
+UI --> APP : 调用
+APP --> DOM : 实体与规则
+APP --> INFRA : 读写仓储
+INFRA ..> DOM : 序列化实体
+@enduml
