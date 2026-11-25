@@ -42,7 +42,7 @@ inline void Notify(INotificationRepository& notifications, IClock& clock,
 
 inline void RequireText(const std::string& text, std::size_t min_length,
                         std::size_t max_length, const std::string& message) {
-  std::size_t length = Trim(text).size();
+  std::size_t length = Utf8Length(Trim(text));
   if (length < min_length || length > max_length) {
     throw DomainError(ErrorCode::kInvalidArgument, message);
   }

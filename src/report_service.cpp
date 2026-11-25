@@ -37,7 +37,7 @@ Report ReportService::Submit(const std::string& reporter_id,
   if (Trim(description).empty()) {
     throw DomainError(ErrorCode::kInvalidArgument, "请填写举报说明");
   }
-  if (Trim(description).size() > 300) {
+  if (Utf8Length(Trim(description)) > 300) {
     throw DomainError(ErrorCode::kInvalidArgument, "举报说明不能超过 300 个字符");
   }
 

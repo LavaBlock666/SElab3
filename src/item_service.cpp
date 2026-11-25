@@ -16,7 +16,7 @@ namespace {
 void ValidateContent(const std::string& title, const std::string& description,
                      Money price) {
   internal::RequireText(title, 2, 60, "标题长度需在 2 到 60 个字符之间");
-  if (Trim(description).size() > 500) {
+  if (Utf8Length(Trim(description)) > 500) {
     throw DomainError(ErrorCode::kInvalidArgument, "描述不能超过 500 个字符");
   }
   if (price <= 0) {
@@ -157,7 +157,7 @@ Item ItemService::UpdatePublished(const std::string& seller_id,
     throw DomainError(ErrorCode::kStateError, "只有已发布商品可以修改描述");
   }
   internal::RequireText(title, 2, 60, "标题长度需在 2 到 60 个字符之间");
-  if (Trim(description).size() > 500) {
+  if (Utf8Length(Trim(description)) > 500) {
     throw DomainError(ErrorCode::kInvalidArgument, "描述不能超过 500 个字符");
   }
   item.title = Trim(title);

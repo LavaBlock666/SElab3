@@ -128,10 +128,8 @@ SellerStats StatsService::ForSeller(const std::string& seller_id) const {
         stats.pending += 1;
         break;
       case ItemStatus::kReserved:
-        stats.reserved += 1;
-        break;
       case ItemStatus::kConfirmed:
-        stats.published += 1;
+        stats.reserved += 1;
         break;
       case ItemStatus::kCompleted:
         stats.completed += 1;
