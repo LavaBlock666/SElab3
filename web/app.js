@@ -266,6 +266,16 @@ async function renderDetail(main) {
   state.detail = item;
   const isOwner = state.user && item.seller_id === state.user.id;
   const canReserve = state.user && state.user.is_buyer && !isOwner && item.status === 'published';
+  let mine = null;
+  if (state.user && state.user.is_buyer && !isOwner) {
+    try {
+      const list = await api('/api/reservations');
+      mine = list.find((entry) => entry.item_id === item.id &&
+        (entry.status === 'pending' || entry.status === 'confirmed'));
+    } catch (error) {
+      mine = null;
+    }
+  }
   main.innerHTML = `
     <div class="toolbar"><button class="btn btn-ghost btn-sm" id="back">‹ 返回</button></div>
     <div class="detail-layout">
@@ -290,6 +300,13 @@ async function renderDetail(main) {
           同一商品仅允许一条有效预约；预约后等待卖家确认，确认前可取消。<br />
           平台仅记录线下交易，不涉及在线支付与物流。
         </div>
+        ${mine ? `<div class="notice" style="border-color:#f5dfb0;background:#fff9ec">
+          <strong>你的预约状态：${esc(mine.status_label)}</strong><br />
+          ${mine.status === 'confirmed'
+            ? '卖家已确认交易，线下交付后请到“我的预约”点“确认完成”。'
+            : '正在等待卖家确认；确认前可在“我的预约”取消。'}
+          <br /><button class="btn btn-primary btn-sm" id="btn-myres" style="margin-top:10px">前往我的预约</button>
+        </div>` : ''}
         <div style="display:flex;gap:12px;margin-top:18px">
           ${canReserve ? '<button class="btn btn-primary" id="btn-reserve" style="padding:14px 40px">立即预约</button>' : ''}
           ${!isOwner ? '<button class="btn btn-ghost" id="btn-report" style="padding:14px 28px">举报该商品</button>' : ''}
@@ -298,13 +315,17 @@ async function renderDetail(main) {
       </div>
     </div>`;
   $('#back').addEventListener('click', () => go('browse'));
+  const myResButton = $('#btn-myres');
+  if (myResButton) {
+    myResButton.addEventListener('click', () => go('reservations'));
+  }
   const reserve = $('#btn-reserve');
   if (reserve) {
     reserve.addEventListener('click', async () => {
       try {
         await api('/api/reserve', { method: 'POST', body: { item_id: item.id } });
-        toast('预约成功，等待卖家确认');
-        go('detail', item.id);
+        toast('预约成功，已加入“我的预约”');
+        go('reservations');
       } catch (error) {
         toast(error.message, true);
       }
@@ -795,10 +816,15 @@ async function openNotifications() {
         </div>`).join('') : '<div class="empty">暂无通知</div>'}
       </div>
       <div class="modal-actions">
+        <button class="btn btn-ghost" id="n-mine">我的预约</button>
         <button class="btn btn-ghost" id="n-close">关闭</button>
         <button class="btn btn-primary" id="n-read">全部标记为已读</button>
       </div>`, (modal) => {
       modal.querySelector('#n-close').addEventListener('click', closeModal);
+      modal.querySelector('#n-mine').addEventListener('click', () => {
+        closeModal();
+        go('reservations');
+      });
       modal.querySelector('#n-read').addEventListener('click', async () => {
         try {
           await api('/api/notifications/read', { method: 'POST' });

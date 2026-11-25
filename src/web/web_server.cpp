@@ -10,6 +10,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <thread>
 #include <cstdio>
 #include <cstdlib>
 #include <fstream>
@@ -224,8 +228,11 @@ class WebApp {
   }
 
   Response Handle(const Request& request) {
+    // 多个工作线程并发处理请求；业务状态（仓储、会话）在锁内访问。
+    std::lock_guard<std::mutex> guard(mutex_);
+    Response response;
     try {
-      return Route(request);
+      response = Route(request);
     } catch (const DomainError& error) {
       int status = 400;
       switch (error.code()) {
@@ -246,13 +253,28 @@ class WebApp {
         default:
           status = 400;
       }
-      return JsonError(status, error.message());
+      response = JsonError(status, error.message());
     } catch (const std::exception& error) {
-      return JsonError(500, error.what());
+      response = JsonError(500, error.what());
     }
+    // 写操作立即落盘，避免进程异常退出丢数据。
+    if (request.method == "POST" && response.status == 200) {
+      SaveAll();
+    }
+    return response;
   }
 
  private:
+  void SaveAll() {
+    categories_.Save();
+    users_.Save();
+    items_.Save();
+    reservations_.Save();
+    reports_.Save();
+    logs_.Save();
+    notification_repo_.Save();
+  }
+
   // ---------- 会话 ----------
 
   std::optional<User> CurrentUser(const Request& request) const {
@@ -916,6 +938,7 @@ class WebApp {
   LogService log_service_;
   StatsService stats_service_;
 
+  std::mutex mutex_;
   std::map<std::string, std::string> sessions_;
   std::string web_root_;
 };
@@ -1094,18 +1117,53 @@ int RunWebServer(const std::string& data_dir, int port, bool open_browser,
     OpenBrowser(url);
   }
 
+  // 工作线程池：I/O 并发处理，业务状态由 WebApp::Handle 内的互斥量串行化。
+  constexpr int kWorkers = 4;
+  std::mutex queue_mutex;
+  std::condition_variable queue_cv;
+  std::deque<SOCKET> queue;
+  bool stopping = false;
+
+  auto worker = [&]() {
+    for (;;) {
+      SOCKET client = INVALID_SOCKET;
+      {
+        std::unique_lock<std::mutex> lock(queue_mutex);
+        queue_cv.wait(lock, [&]() { return stopping || !queue.empty(); });
+        if (queue.empty()) {
+          if (stopping) {
+            return;
+          }
+          continue;
+        }
+        client = queue.front();
+        queue.pop_front();
+      }
+      std::string raw = ReadRequest(client);
+      if (!raw.empty()) {
+        Request request = ParseRequest(raw);
+        Response response = app.Handle(request);
+        SendResponse(client, response);
+      }
+      closesocket(client);
+    }
+  };
+  std::vector<std::thread> workers;
+  workers.reserve(kWorkers);
+  for (int i = 0; i < kWorkers; ++i) {
+    workers.emplace_back(worker);
+  }
+
   while (true) {
     SOCKET client = accept(server, nullptr, nullptr);
     if (client == INVALID_SOCKET) {
       continue;
     }
-    std::string raw = ReadRequest(client);
-    if (!raw.empty()) {
-      Request request = ParseRequest(raw);
-      Response response = app.Handle(request);
-      SendResponse(client, response);
+    {
+      std::lock_guard<std::mutex> lock(queue_mutex);
+      queue.push_back(client);
     }
-    closesocket(client);
+    queue_cv.notify_one();
   }
 
   closesocket(server);

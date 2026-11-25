@@ -2,6 +2,11 @@
   box-sizing: border-box;
 }
 
+/* 组件自带的 display 会覆盖 hidden 属性，这里显式兜底 */
+[hidden] {
+  display: none !important;
+}
+
 :root {
   --primary: #2f6bff;
   --primary-dark: #1e4fd8;
