@@ -1,5 +1,5 @@
 CXX ?= g++
-CXXFLAGS ?= -std=c++17 -Wall -Wextra -Wpedantic -O2 -Iinclude
+CXXFLAGS ?= -std=c++17 -Wall -Wextra -Wpedantic -O2 -static -Iinclude
 BUILD := build
 APP := $(BUILD)/campus_market.exe
 TEST := $(BUILD)/campus_tests.exe
