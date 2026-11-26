@@ -2,6 +2,7 @@
 
 const state = {
   user: null,
+  sid: sessionStorage.getItem("campus_sid") || "",
   screen: 'browse',
   categories: [],
   filters: { keyword: '', category: '', min: '', max: '', sort: 'latest', page: 1 },
@@ -27,10 +28,19 @@ function resetRegisterForm() {
   }
 }
 
+// 会话号按标签页保存在 sessionStorage，多个标签页可登录不同账号。
+function clearSession() {
+  state.sid = '';
+  sessionStorage.removeItem('campus_sid');
+}
+
 // ---------------------------------------------------------------- 基础
 
 async function api(path, options = {}) {
   const init = { method: options.method || 'GET', headers: {} };
+  if (state.sid) {
+    init.headers['X-Session'] = state.sid;
+  }
   if (options.body) {
     init.headers['Content-Type'] = 'application/x-www-form-urlencoded';
     init.body = new URLSearchParams(options.body).toString();
@@ -44,6 +54,7 @@ async function api(path, options = {}) {
   }
   if (!payload.ok) {
     if (response.status === 401) {
+      clearSession();
       showLogin();
     }
     throw new Error(payload.error || '请求失败');
@@ -866,12 +877,14 @@ $('#login-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = new FormData(event.target);
   try {
-    const user = await api('/api/login', {
+    const payload = await api('/api/login', {
       method: 'POST',
       body: { account: form.get('account'), password: form.get('password') }
     });
-    await showApp(user);
-    toast('登录成功，欢迎 ' + user.email);
+    state.sid = payload.sid;
+    sessionStorage.setItem('campus_sid', payload.sid);
+    await showApp(payload.user);
+    toast('登录成功，欢迎 ' + payload.user.email);
   } catch (error) {
     toast(error.message, true);
   }
@@ -909,6 +922,7 @@ $('#btn-logout').addEventListener('click', async () => {
   } catch (error) {
     /* 忽略 */
   }
+  clearSession();
   showLogin();
 });
 

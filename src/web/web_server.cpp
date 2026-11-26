@@ -134,6 +134,7 @@ struct Request {
   std::map<std::string, std::string> query;
   std::map<std::string, std::string> form;
   std::map<std::string, std::string> cookies;
+  std::string session_id;
 
   std::string Param(const std::string& key) const {
     auto it = form.find(key);
@@ -282,11 +283,18 @@ class WebApp {
   // ---------- 会话 ----------
 
   std::optional<User> CurrentUser(const Request& request) const {
-    auto it = request.cookies.find("sid");
-    if (it == request.cookies.end()) {
+    // 优先使用标签页自带的会话号（X-Session），Cookie 仅作兼容回退。
+    std::string sid = request.session_id;
+    if (sid.empty()) {
+      auto it = request.cookies.find("sid");
+      if (it != request.cookies.end()) {
+        sid = it->second;
+      }
+    }
+    if (sid.empty()) {
       return std::nullopt;
     }
-    auto session = sessions_.find(it->second);
+    auto session = sessions_.find(sid);
     if (session == sessions_.end()) {
       return std::nullopt;
     }
@@ -469,9 +477,8 @@ class WebApp {
                                     request.Param("password"));
     std::string sid = ids_.Next("SID");
     sessions_[sid] = user.id;
-    Response response = JsonOk(UserJson(user));
-    response.extra_headers = "Set-Cookie: sid=" + sid + "; Path=/; HttpOnly\r\n";
-    return response;
+    // 会话号随响应返回，前端存入 sessionStorage，实现按标签页隔离。
+    return JsonOk("{\"sid\":" + Quote(sid) + ",\"user\":" + UserJson(user) + "}");
   }
 
   Response Register(const Request& request) {
@@ -484,13 +491,15 @@ class WebApp {
   }
 
   Response Logout(const Request& request) {
-    auto it = request.cookies.find("sid");
-    if (it != request.cookies.end()) {
-      sessions_.erase(it->second);
+    if (!request.session_id.empty()) {
+      sessions_.erase(request.session_id);
+    } else {
+      auto it = request.cookies.find("sid");
+      if (it != request.cookies.end()) {
+        sessions_.erase(it->second);
+      }
     }
-    Response response = JsonOk("{\"message\":\"已退出\"}");
-    response.extra_headers = "Set-Cookie: sid=; Path=/; Max-Age=0\r\n";
-    return response;
+    return JsonOk("{\"message\":\"已退出\"}");
   }
 
   Response Reserve(const Request& request) {
@@ -968,6 +977,10 @@ Request ParseRequest(const std::string& raw) {
     std::string value = line.substr(colon + 1);
     while (!value.empty() && value.front() == ' ') {
       value.erase(value.begin());
+    }
+    if (key == "x-session") {
+      request.session_id = Trim(value);
+      continue;
     }
     if (key == "cookie") {
       request.cookies = ParseParams(value);
