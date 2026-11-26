@@ -22,7 +22,7 @@ int main(int argc, char** argv) {
       open_browser = false;
     } else if (arg == "--help") {
       std::printf(
-          "用法: campus_market_web [--data 目录] [--web 前端目录] [--port 端口] "
+          "Usage: campus_market_web [--data DIR] [--web WEB_DIR] [--port PORT] "
           "[--no-open]\n");
       return 0;
     }

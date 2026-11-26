@@ -1078,7 +1078,7 @@ int RunWebServer(const std::string& data_dir, int port, bool open_browser,
                  const std::string& web_root) {
   WSADATA wsa;
   if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
-    std::printf("WSAStartup 失败\n");
+    std::printf("WSAStartup failed\n");
     return 1;
   }
   WebApp app(data_dir, web_root);
@@ -1105,14 +1105,14 @@ int RunWebServer(const std::string& data_dir, int port, bool open_browser,
     server = INVALID_SOCKET;
   }
   if (server == INVALID_SOCKET) {
-    std::printf("无法监听端口 %d\n", port);
+    std::printf("Cannot listen on port %d\n", port);
     WSACleanup();
     return 1;
   }
 
   std::string url = "http://127.0.0.1:" + std::to_string(actual_port) + "/";
-  std::printf("校园二手交易系统已启动：%s\n", url.c_str());
-  std::printf("按 Ctrl+C 结束。\n");
+  std::printf("Campus Market server started: %s\n", url.c_str());
+  std::printf("Press Ctrl+C to stop.\n");
   if (open_browser) {
     OpenBrowser(url);
   }

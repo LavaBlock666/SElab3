@@ -494,22 +494,22 @@ struct TestCase {
 
 int main() {
   std::vector<TestCase> tests = {
-      {"状态机", TestStateMachine},
-      {"格式化与转义", TestFormatting},
-      {"注册校验", TestRegister},
-      {"登录与锁定", TestLoginAndLockout},
-      {"商品生命周期", TestItemLifecycle},
-      {"权限控制", TestPermissions},
-      {"下架作废预约", TestOfflineVoidsReservation},
-      {"预约全流程", TestReservationFlow},
-      {"取消预约", TestCancelReservation},
-      {"并发预约唯一性", TestConcurrentReservation},
-      {"组合检索", TestSearch},
-      {"举报处理", TestReportFlow},
-      {"举报驳回", TestReportRejected},
-      {"日志与统计", TestLogAndStats},
-      {"持久化", TestPersistence},
-      {"输入校验", TestValidation},
+      {"state machine", TestStateMachine},
+      {"formatting and escaping", TestFormatting},
+      {"registration validation", TestRegister},
+      {"login and lockout", TestLoginAndLockout},
+      {"item lifecycle", TestItemLifecycle},
+      {"permission control", TestPermissions},
+      {"offline voids reservation", TestOfflineVoidsReservation},
+      {"reservation flow", TestReservationFlow},
+      {"cancel reservation", TestCancelReservation},
+      {"concurrent reservation uniqueness", TestConcurrentReservation},
+      {"combined search", TestSearch},
+      {"report handling", TestReportFlow},
+      {"report rejected", TestReportRejected},
+      {"logs and statistics", TestLogAndStats},
+      {"persistence", TestPersistence},
+      {"input validation", TestValidation},
   };
 
   for (const auto& test : tests) {
@@ -519,7 +519,7 @@ int main() {
     std::cout << (g_failures == before ? "[       OK ] " : "[  FAILED  ] ")
               << test.name << "\n";
   }
-  std::cout << "\n共 " << tests.size() << " 组用例，" << g_checks << " 个断言，"
-            << g_failures << " 个失败\n";
+  std::cout << "\n" << tests.size() << " test groups, " << g_checks
+            << " assertions, " << g_failures << " failure(s)\n";
   return g_failures == 0 ? 0 : 1;
 }

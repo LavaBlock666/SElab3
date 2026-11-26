@@ -19,6 +19,14 @@ const esc = (text) => String(text == null ? '' : text)
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
+// 注册表单不保留输入：切换页签、刷新、从缓存恢复时都清空。
+function resetRegisterForm() {
+  const form = document.querySelector('#register-form');
+  if (form) {
+    form.reset();
+  }
+}
+
 // ---------------------------------------------------------------- 基础
 
 async function api(path, options = {}) {
@@ -847,8 +855,10 @@ document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach((item) => item.classList.remove('active'));
     tab.classList.add('active');
-    $('#login-form').hidden = tab.dataset.tab !== 'login';
-    $('#register-form').hidden = tab.dataset.tab !== 'register';
+    const showRegister = tab.dataset.tab === 'register';
+    $('#login-form').hidden = showRegister;
+    $('#register-form').hidden = !showRegister;
+    resetRegisterForm();
   });
 });
 
@@ -879,6 +889,7 @@ $('#register-form').addEventListener('submit', async (event) => {
       }
     });
     toast('注册成功，请登录');
+    resetRegisterForm();
     document.querySelector('.tab[data-tab="login"]').click();
   } catch (error) {
     toast(error.message, true);
@@ -916,3 +927,8 @@ $('#btn-notify').addEventListener('click', openNotifications);
     showLogin();
   }
 })();
+
+// 浏览器前进/后退或从往返缓存恢复时，注册表单同样保持为空。
+window.addEventListener('pageshow', () => {
+  resetRegisterForm();
+});

@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
     } else if (arg == "--no-seed") {
       seed_demo = false;
     } else if (arg == "--help") {
-      std::cout << "用法: campus_market [--data <目录>] [--no-seed]\n";
+      std::cout << "Usage: campus_market [--data DIR] [--no-seed]\n";
       return 0;
     }
   }
