@@ -23,6 +23,10 @@
 #include <string>
 #include <vector>
 
+#include <filesystem>
+
+#include "campus/demo_seed.h"
+#include "campus/instance_lock.h"
 #include "campus/services.h"
 #include "campus/store.h"
 
@@ -862,60 +866,8 @@ class WebApp {
   // ---------- 初始化演示数据 ----------
 
   void SeedIfEmpty() {
-    if (!categories_.All().empty()) {
-      return;
-    }
-    const char* names[] = {"教材书籍", "数码电子", "生活用品", "运动户外", "其他"};
-    for (int i = 0; i < 5; ++i) {
-      Category category;
-      category.id = "CT-" + std::to_string(i + 1);
-      category.name = names[i];
-      categories_.Add(category);
-    }
-    categories_.Save();
-    if (!users_.All().empty()) {
-      return;
-    }
-    User admin;
-    User seller;
-    try {
-      admin = user_service_.CreateAdmin("admin@campus.edu", "13800000001",
-                                        "Admin@123");
-      seller = user_service_.Register("seller@campus.edu", "13800000002",
-                                      "Seller@123", true);
-      user_service_.Register("buyer@campus.edu", "13800000003", "Buyer@123",
-                             false);
-      user_service_.Register("buyer2@campus.edu", "13800000004", "Buyer@123",
-                             false);
-    } catch (const DomainError&) {
-      return;
-    }
-    auto list = categories_.All();
-    struct Demo {
-      int category;
-      const char* title;
-      const char* description;
-      Money price;
-    };
-    Demo demo[] = {
-        {0, "高等数学 第七版 上下册", "考研用过，笔记齐全，无缺页。", 2500},
-        {1, "27 英寸 2K 显示器", "自用两年，无坏点，带原装支架。", 62000},
-        {3, "捷安特山地自行车", "骑行约 300 公里，保养良好。", 48000},
-        {2, "宿舍收纳箱 三件套", "搬宿舍剩下的，全新未使用。", 3500}};
-    for (const auto& entry : demo) {
-      try {
-        Item item = item_service_.CreateDraft(
-            seller.id, list[entry.category].id, entry.title, entry.description,
-            entry.price);
-        item_service_.SubmitForReview(seller.id, item.id);
-        item_service_.Approve(admin.id, item.id);
-      } catch (const DomainError&) {
-      }
-    }
-    categories_.Save();
-    users_.Save();
-    items_.Save();
-    logs_.Save();
+    SeedDemoData(categories_, users_, user_service_, item_service_);
+    SaveAll();
   }
 
   DatabasePaths paths_;
@@ -1081,6 +1033,14 @@ int RunWebServer(const std::string& data_dir, int port, bool open_browser,
     std::printf("WSAStartup failed\n");
     return 1;
   }
+  InstanceLock lock;
+  if (!lock.Acquire(data_dir)) {
+    std::printf(
+        "Another instance is already using this data directory. "
+        "Close it before starting a new one.\n");
+    WSACleanup();
+    return 1;
+  }
   WebApp app(data_dir, web_root);
 
   SOCKET server = INVALID_SOCKET;
@@ -1090,9 +1050,11 @@ int RunWebServer(const std::string& data_dir, int port, bool open_browser,
     if (server == INVALID_SOCKET) {
       continue;
     }
-    int reuse = 1;
-    setsockopt(server, SOL_SOCKET, SO_REUSEADDR,
-               reinterpret_cast<const char*>(&reuse), sizeof(reuse));
+    // Windows 下 SO_REUSEADDR 允许重复绑定同一端口，会让两个实例抢同一端口；
+    // 这里用 SO_EXCLUSIVEADDRUSE 保证端口独占，第二个实例只能换端口或报错。
+    BOOL exclusive = TRUE;
+    setsockopt(server, SOL_SOCKET, SO_EXCLUSIVEADDRUSE,
+               reinterpret_cast<const char*>(&exclusive), sizeof(exclusive));
     sockaddr_in address{};
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -1110,9 +1072,17 @@ int RunWebServer(const std::string& data_dir, int port, bool open_browser,
     return 1;
   }
 
+  if (actual_port != port) {
+    std::printf(
+        "Port %d is already in use (another instance?). Using %d instead.\n",
+        port, actual_port);
+  }
   std::string url = "http://127.0.0.1:" + std::to_string(actual_port) + "/";
   std::printf("Campus Market server started: %s\n", url.c_str());
+  std::printf("Data directory: %s\n",
+              std::filesystem::absolute(data_dir).string().c_str());
   std::printf("Press Ctrl+C to stop.\n");
+  std::fflush(stdout);
   if (open_browser) {
     OpenBrowser(url);
   }

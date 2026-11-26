@@ -5,7 +5,7 @@ set PATH=D:\mingw64\bin;%PATH%
 cd /d "%~dp0"
 if not exist build mkdir build
 
-set CORE=src\model.cpp src\store.cpp src\user_service.cpp src\item_service.cpp src\search_service.cpp src\reservation_service.cpp src\report_service.cpp src\log_stats_service.cpp
+set CORE=src\model.cpp src\store.cpp src\demo_seed.cpp src\user_service.cpp src\item_service.cpp src\search_service.cpp src\reservation_service.cpp src\report_service.cpp src\log_stats_service.cpp
 
 echo [1/3] 编译命令行版...
 g++ -std=c++17 -Wall -Wextra -Wpedantic -O2 -static -Iinclude ^

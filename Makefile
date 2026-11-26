@@ -4,7 +4,7 @@ BUILD := build
 APP := $(BUILD)/campus_market.exe
 TEST := $(BUILD)/campus_tests.exe
 WEB := $(BUILD)/campus_market_web.exe
-CORE := src/model.cpp src/store.cpp src/user_service.cpp src/item_service.cpp \
+CORE := src/model.cpp src/store.cpp src/demo_seed.cpp src/user_service.cpp \
         src/search_service.cpp src/reservation_service.cpp src/report_service.cpp \
         src/log_stats_service.cpp
 SRC := $(CORE) src/cli.cpp src/main.cpp

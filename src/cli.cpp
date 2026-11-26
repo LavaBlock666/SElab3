@@ -18,6 +18,10 @@
 #include <windows.h>
 #endif
 
+#include <filesystem>
+
+#include "campus/demo_seed.h"
+#include "campus/instance_lock.h"
 #include "campus/services.h"
 #include "campus/store.h"
 
@@ -178,7 +182,8 @@ bool Confirm(const std::string& prompt) {
 class ConsoleUI {
  public:
   ConsoleUI(const std::string& data_dir, bool seed_demo)
-      : paths_(MakeDatabasePaths(data_dir)),
+      : data_dir_(data_dir),
+        paths_(MakeDatabasePaths(data_dir)),
         categories_(paths_.categories),
         users_(paths_.users),
         items_(paths_.items),
@@ -203,6 +208,11 @@ class ConsoleUI {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
 #endif
+    InstanceLock lock;
+    if (!lock.Acquire(data_dir_)) {
+      std::cout << "Another instance is already using this data directory.\n";
+      return 1;
+    }
     LoadAll();
     if (seed_demo_) {
       SeedIfEmpty();
@@ -244,69 +254,7 @@ class ConsoleUI {
   }
 
   void SeedIfEmpty() {
-    if (!categories_.All().empty()) {
-      return;
-    }
-    const char* names[] = {"Books", "Electronics", "Daily goods", "Sports",
-                           "Others"};
-    for (int i = 0; i < 5; ++i) {
-      Category category;
-      category.id = "CT-" + std::to_string(i + 1);
-      category.name = names[i];
-      categories_.Add(category);
-    }
-    categories_.Save();
-
-    if (!users_.All().empty()) {
-      return;
-    }
-    User admin;
-    User seller;
-    User buyer;
-    try {
-      admin = user_service_.CreateAdmin("admin@campus.edu", "13800000001",
-                                        "Admin@123");
-      seller = user_service_.Register("seller@campus.edu", "13800000002",
-                                      "Seller@123", true);
-      buyer = user_service_.Register("buyer@campus.edu", "13800000003",
-                                     "Buyer@123", false);
-      user_service_.Register("buyer2@campus.edu", "13800000004", "Buyer@123",
-                             false);
-    } catch (const DomainError& error) {
-      std::cout << "Failed to seed demo accounts: " << ErrorText(error.code())
-                << "\n";
-      return;
-    }
-
-    auto all_categories = categories_.All();
-    struct DemoItem {
-      std::string category_id;
-      std::string title;
-      std::string description;
-      Money price;
-    };
-    std::vector<DemoItem> demo = {
-        {all_categories[0].id, "Calculus Textbook 7th Edition",
-         "Used for one semester, notes included.", 2500},
-        {all_categories[1].id, "27-inch 2K Monitor",
-         "Two years old, no dead pixels, stand included.", 62000},
-        {all_categories[3].id, "Mountain Bike",
-         "About 300 km ridden, well maintained.", 48000},
-        {all_categories[2].id, "Storage Box Set",
-         "Brand new, left over from moving out.", 3500}};
-    for (const auto& entry : demo) {
-      try {
-        Item item = item_service_.CreateDraft(seller.id, entry.category_id,
-                                              entry.title, entry.description,
-                                              entry.price);
-        item_service_.SubmitForReview(seller.id, item.id);
-        item_service_.Approve(admin.id, item.id);
-      } catch (const DomainError& error) {
-        std::cout << "Failed to seed demo item: " << ErrorText(error.code())
-                  << "\n";
-      }
-    }
-    (void)buyer;
+    SeedDemoData(categories_, users_, user_service_, item_service_);
     SaveAll();
   }
 
@@ -317,7 +265,7 @@ class ConsoleUI {
               << kLine << "\n"
               << "  Campus Market - second-hand trading (console build)\n"
               << "  Data directory: "
-              << AsciiOnly(paths_.users.substr(0, paths_.users.rfind('/')))
+              << AsciiOnly(std::filesystem::absolute(data_dir_).string())
               << "\n"
               << kLine << "\n";
     std::cout << "Demo accounts (password in brackets):\n"
@@ -896,6 +844,7 @@ class ConsoleUI {
 
   // ---------------------------------------------------------------- members
 
+  std::string data_dir_;
   DatabasePaths paths_;
   FileCategoryRepository categories_;
   FileUserRepository users_;
