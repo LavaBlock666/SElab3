@@ -29,7 +29,7 @@ echo.
 echo 编译完成：
 echo   build\campus_market.exe      命令行版
 echo   build\campus_tests.exe       单元测试
-echo   build\campus_market_web.exe  图形界面（浏览器打开 http://127.0.0.1:8765/）
+echo   build\campus_market_web.exe  图形界面（启动后手动访问 http://127.0.0.1:8765/）
 exit /b 0
 
 :fail

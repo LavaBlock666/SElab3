@@ -13,8 +13,8 @@ void SeedDemoData(ICategoryRepository& categories, IUserRepository& users,
   if (!categories.All().empty()) {
     return;
   }
-  const char* names[] = {"Books", "Electronics", "Daily goods", "Sports",
-                         "Others"};
+  const char* names[] = {"教材书籍", "数码电子", "生活用品", "运动户外",
+                         "其他"};
   for (int i = 0; i < 5; ++i) {
     Category category;
     category.id = "CT-" + std::to_string(i + 1);
@@ -47,12 +47,10 @@ void SeedDemoData(ICategoryRepository& categories, IUserRepository& users,
     Money price;
   };
   const DemoItem demo[] = {
-      {0, "Calculus Textbook 7th Edition",
-       "Used for one semester, notes included, no missing pages.", 2500},
-      {1, "27-inch 2K Monitor",
-       "Two years old, no dead pixels, original stand included.", 62000},
-      {3, "Mountain Bike", "About 300 km ridden, well maintained.", 48000},
-      {2, "Storage Box Set", "Brand new, left over from moving out.", 3500}};
+      {0, "高等数学 第七版 上下册", "考研用过，笔记齐全，无缺页。", 2500},
+      {1, "27 英寸 2K 显示器", "自用两年，无坏点，带原装支架。", 62000},
+      {3, "捷安特山地自行车", "骑行约 300 公里，保养良好。", 48000},
+      {2, "宿舍收纳箱 三件套", "搬宿舍剩下的，全新未使用。", 3500}};
   for (const auto& entry : demo) {
     try {
       Item item = item_service.CreateDraft(

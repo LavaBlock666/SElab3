@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   std::string data_dir = "data";
   std::string web_root = "web";
   int port = 8765;
-  bool open_browser = true;
+  bool open_browser = false;
   for (int i = 1; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg == "--data" && i + 1 < argc) {
@@ -18,12 +18,14 @@ int main(int argc, char** argv) {
       web_root = argv[++i];
     } else if (arg == "--port" && i + 1 < argc) {
       port = std::atoi(argv[++i]);
+    } else if (arg == "--open") {
+      open_browser = true;
     } else if (arg == "--no-open") {
       open_browser = false;
     } else if (arg == "--help") {
       std::printf(
           "Usage: campus_market_web [--data DIR] [--web WEB_DIR] [--port PORT] "
-          "[--no-open]\n");
+          "[--open]\n");
       return 0;
     }
   }

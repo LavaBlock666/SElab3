@@ -30,25 +30,6 @@ namespace {
 
 const char* kLine = "------------------------------------------------------------";
 
-// Any non-ASCII byte (e.g. Chinese text typed by a user) is replaced by a
-// question mark so the console output never depends on the code page.
-std::string AsciiOnly(const std::string& text) {
-  std::string out;
-  bool last_was_placeholder = false;
-  for (unsigned char c : text) {
-    if (c >= 0x80) {
-      if (!last_was_placeholder) {
-        out.push_back('?');
-        last_was_placeholder = true;
-      }
-    } else {
-      out.push_back(static_cast<char>(c));
-      last_was_placeholder = false;
-    }
-  }
-  return out;
-}
-
 const char* RoleEn(Role role) {
   switch (role) {
     case Role::kBuyer:
@@ -207,6 +188,7 @@ class ConsoleUI {
   int Run() {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
 #endif
     InstanceLock lock;
     if (!lock.Acquire(data_dir_)) {
@@ -265,7 +247,7 @@ class ConsoleUI {
               << kLine << "\n"
               << "  Campus Market - second-hand trading (console build)\n"
               << "  Data directory: "
-              << AsciiOnly(std::filesystem::absolute(data_dir_).string())
+              << std::filesystem::absolute(data_dir_).string()
               << "\n"
               << kLine << "\n";
     std::cout << "Demo accounts (password in brackets):\n"
@@ -278,7 +260,7 @@ class ConsoleUI {
   void PrintCategories() const {
     std::cout << "Categories: ";
     for (const auto& category : categories_.All()) {
-      std::cout << "[" << category.id << "] " << AsciiOnly(category.name)
+      std::cout << "[" << category.id << "] " << category.name
                 << "  ";
     }
     std::cout << "\n";
@@ -291,10 +273,10 @@ class ConsoleUI {
 
   void PrintItemRow(int index, const Item& item) const {
     auto category = categories_.FindById(item.category_id);
-    std::cout << "  " << index << ") " << AsciiOnly(item.title) << "  $"
+    std::cout << "  " << index << ") " << item.title << "  $"
               << MoneyToString(item.price) << "  "
               << ItemStatusEn(item.status) << "  "
-              << (category ? AsciiOnly(category->name) : "Uncategorized")
+              << (category ? category->name : "Uncategorized")
               << "  views " << item.view_count << "\n";
     std::cout << "     id " << item.id << "  seller "
               << UserLabel(item.seller_id) << "\n";
@@ -313,18 +295,18 @@ class ConsoleUI {
   void PrintItemDetail(const Item& item) const {
     auto category = categories_.FindById(item.category_id);
     std::cout << "\n" << kLine << "\n"
-              << "Title: " << AsciiOnly(item.title) << "\n"
+              << "Title: " << item.title << "\n"
               << "Price: $" << MoneyToString(item.price) << "\n"
               << "Category: "
-              << (category ? AsciiOnly(category->name) : "Uncategorized")
+              << (category ? category->name : "Uncategorized")
               << "\n"
               << "Status: " << ItemStatusEn(item.status) << "\n"
               << "Seller: " << UserLabel(item.seller_id) << "\n"
               << "Views: " << item.view_count << "\n"
               << "Created: " << FormatTime(item.created_at) << "\n"
-              << "Description: " << AsciiOnly(item.description) << "\n";
+              << "Description: " << item.description << "\n";
     if (!item.reject_reason.empty()) {
-      std::cout << "Reject reason: " << AsciiOnly(item.reject_reason) << "\n";
+      std::cout << "Reject reason: " << item.reject_reason << "\n";
     }
     std::cout << kLine << "\n";
   }
@@ -416,7 +398,7 @@ class ConsoleUI {
       std::cout << "Error (" << context << "): " << ErrorText(error.code())
                 << " [" << static_cast<int>(error.code()) << "]\n";
     } catch (const std::exception& error) {
-      std::cout << "Unexpected error: " << AsciiOnly(error.what()) << "\n";
+      std::cout << "Unexpected error: " << error.what() << "\n";
     }
   }
 
@@ -555,7 +537,7 @@ class ConsoleUI {
     for (std::size_t i = 0; i < list.size(); ++i) {
       auto item = items_.FindById(list[i].item_id);
       std::cout << "  " << (i + 1) << ") " << list[i].id << "  "
-                << (item ? AsciiOnly(item->title) : list[i].item_id) << "  "
+                << (item ? item->title : list[i].item_id) << "  "
                 << ReservationStatusEn(list[i].status) << "  "
                 << FormatTime(list[i].created_at) << "\n";
     }
@@ -623,7 +605,7 @@ class ConsoleUI {
         Item updated = item_service_.UpdatePublished(
             current_->id, item.id, title.empty() ? item.title : title,
             description.empty() ? item.description : description);
-        std::cout << "Updated: " << AsciiOnly(updated.title) << "\n";
+        std::cout << "Updated: " << updated.title << "\n";
         break;
       }
       case 2: {
@@ -672,7 +654,7 @@ class ConsoleUI {
     for (std::size_t i = 0; i < pending.size(); ++i) {
       auto item = items_.FindById(pending[i].item_id);
       std::cout << "  " << (i + 1) << ") " << pending[i].id << "  "
-                << (item ? AsciiOnly(item->title) : "") << "  buyer "
+                << (item ? item->title : "") << "  buyer "
                 << UserLabel(pending[i].buyer_id) << "\n";
     }
     int index = ReadInt("Select reservation (0 back): ", 0,
@@ -731,7 +713,7 @@ class ConsoleUI {
       auto item = items_.FindById(pending[i].item_id);
       std::cout << "  " << (i + 1) << ") " << pending[i].id << "  "
                 << ReportReasonEn(pending[i].reason) << "  "
-                << (item ? AsciiOnly(item->title) : "") << "\n";
+                << (item ? item->title : "") << "\n";
     }
     int index =
         ReadInt("Select report (0 back): ", 0, static_cast<int>(pending.size()));
@@ -740,7 +722,7 @@ class ConsoleUI {
     }
     const Report& report = pending[index - 1];
     std::cout << "Reporter: " << UserLabel(report.reporter_id) << "\n"
-              << "Description: " << AsciiOnly(report.description) << "\n"
+              << "Description: " << report.description << "\n"
               << "Reports on this item: "
               << report_service_.ListByItem(report.item_id).size() << "\n";
     std::cout << "1) Uphold (take item offline)  2) Reject  0) back\n";
@@ -771,10 +753,10 @@ class ConsoleUI {
     }
     for (const auto& log : list) {
       std::cout << "  " << FormatTime(log.created_at) << "  "
-                << UserLabel(log.operator_id) << "  " << AsciiOnly(log.action)
-                << "  " << AsciiOnly(log.target_type) << "/" << log.target_id;
+                << UserLabel(log.operator_id) << "  " << log.action
+                << "  " << log.target_type << "/" << log.target_id;
       if (!log.detail.empty()) {
-        std::cout << "  " << AsciiOnly(log.detail);
+        std::cout << "  " << log.detail;
       }
       std::cout << "\n";
     }
@@ -810,7 +792,7 @@ class ConsoleUI {
               << report.pending_reports << ", active users "
               << report.active_users << "\nItems by category: ";
     for (const auto& entry : report.items_by_category) {
-      std::cout << AsciiOnly(entry.first) << "=" << entry.second << "  ";
+      std::cout << entry.first << "=" << entry.second << "  ";
     }
     std::cout << "\nItems by status: ";
     for (const auto& entry : report.items_by_status) {
@@ -831,7 +813,8 @@ class ConsoleUI {
     for (const auto& notification : list) {
       std::cout << "  [" << (notification.read ? "read" : "unread") << "] "
                 << FormatTime(notification.created_at) << "  "
-                << NotificationTypeEn(notification.type) << "\n";
+                << NotificationTypeEn(notification.type) << "  "
+                << notification.content << "\n";
     }
     if (Confirm("Mark all as read")) {
       for (const auto& notification : list) {
