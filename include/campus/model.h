@@ -116,6 +116,7 @@ struct Item {
   ItemStatus status = ItemStatus::kDraft;
   int view_count = 0;
   std::string reject_reason;
+  std::string image;  // 商品图片 URL，例如 /uploads/IT-xxx.jpg
   Timestamp created_at = 0;
   Timestamp updated_at = 0;
 };

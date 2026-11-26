@@ -910,3 +910,83 @@ button {
   text-align: center;
   color: var(--muted);
 }
+
+/* 图片与上传 */
+.thumb img,
+.detail-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
+.detail-image img {
+  border-radius: 12px;
+}
+
+.upload-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.upload-preview {
+  margin-top: 10px;
+  height: 160px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: #fafbfc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 13px;
+  overflow: hidden;
+}
+
+.upload-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cell-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cell-thumb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #eef3ff;
+  color: var(--muted);
+  font-size: 11px;
+  overflow: hidden;
+  flex: none;
+}
+
+.cell-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.audit-image {
+  height: 180px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #eaf0ff;
+  margin-bottom: 14px;
+}
+
+.audit-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

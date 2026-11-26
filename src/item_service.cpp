@@ -215,6 +215,23 @@ Item ItemService::TakeOffline(const std::string& seller_id,
   return result;
 }
 
+Item ItemService::SetImage(const std::string& seller_id,
+                           const std::string& item_id,
+                           const std::string& url) {
+  Item item = MustFindItem(items_, item_id);
+  if (item.seller_id != seller_id) {
+    throw DomainError(ErrorCode::kPermissionDenied, "只能修改自己的商品");
+  }
+  if (IsTerminal(item.status)) {
+    throw DomainError(ErrorCode::kStateError, "已结束的商品不能修改图片");
+  }
+  item.image = url;
+  item.updated_at = clock_.Now();
+  items_.Update(item);
+  internal::WriteLog(logs_, clock_, ids_, seller_id, "修改图片", "商品", item.id,
+                     url.empty() ? "清除图片" : "更新图片");
+  return item;
+}
 std::vector<Item> ItemService::ListBySeller(const std::string& seller_id) const {
   return items_.FindBySeller(seller_id);
 }

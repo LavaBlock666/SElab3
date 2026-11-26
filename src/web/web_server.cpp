@@ -119,6 +119,32 @@ std::map<std::string, std::string> ParseParams(const std::string& text) {
   return result;
 }
 
+std::vector<unsigned char> Base64Decode(const std::string& input) {
+  auto value = [](char c) -> int {
+    if (c >= 'A' && c <= 'Z') return c - 'A';
+    if (c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if (c >= '0' && c <= '9') return c - '0' + 52;
+    if (c == '+' || c == '-') return 62;
+    if (c == '/' || c == '_') return 63;
+    return -1;
+  };
+  std::vector<unsigned char> out;
+  int buffer = 0;
+  int bits = 0;
+  for (char c : input) {
+    if (c == '=') break;
+    int v = value(c);
+    if (v < 0) continue;
+    buffer = (buffer << 6) | v;
+    bits += 6;
+    if (bits >= 8) {
+      bits -= 8;
+      out.push_back(static_cast<unsigned char>((buffer >> bits) & 0xFF));
+    }
+  }
+  return out;
+}
+
 std::string Lower(std::string text) {
   std::transform(text.begin(), text.end(), text.begin(),
                  [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -180,6 +206,7 @@ std::string ItemJson(const Item& item, const std::string& category,
       << "\"seller\":" << Quote(seller) << ","
       << "\"seller_id\":" << Quote(item.seller_id) << ","
       << "\"description\":" << Quote(item.description) << ","
+      << "\"image\":" << Quote(item.image) << ","
       << "\"views\":" << item.view_count << ","
       << "\"created_at\":" << Quote(FormatTime(item.created_at)) << ","
       << "\"reject_reason\":" << Quote(item.reject_reason)
@@ -211,6 +238,7 @@ class WebApp {
                         notification_repo_, logs_, clock_, ids_),
         log_service_(logs_, clock_, ids_),
         stats_service_(users_, items_, categories_, reservations_, reports_),
+        data_dir_(std::move(data_dir)),
         web_root_(std::move(web_root)) {
     categories_.Load();
     users_.Load();
@@ -337,6 +365,9 @@ class WebApp {
     const std::string& path = request.path;
     const std::string& method = request.method;
 
+    if (method == "GET" && path == "/api/version") {
+      return JsonOk("{\"version\":\"2026-11-26.3\"}");
+    }
     if (method == "GET" && path == "/api/categories") {
       return CategoriesJson();
     }
@@ -403,6 +434,9 @@ class WebApp {
     }
     if (method == "POST" && path == "/api/notifications/read") {
       return ReadNotifications(request);
+    }
+    if (method == "GET" && path.rfind("/uploads/", 0) == 0) {
+      return UploadFile(path);
     }
     if (method == "GET") {
       return StaticFile(path);
@@ -477,8 +511,11 @@ class WebApp {
                                     request.Param("password"));
     std::string sid = ids_.Next("SID");
     sessions_[sid] = user.id;
-    // 会话号随响应返回，前端存入 sessionStorage，实现按标签页隔离。
-    return JsonOk("{\"sid\":" + Quote(sid) + ",\"user\":" + UserJson(user) + "}");
+    // 会话号随响应返回；同时平铺用户字段，兼容尚未刷新的旧页面。
+    std::string user_json = UserJson(user);
+    std::string flat = user_json.substr(1, user_json.size() - 2);
+    return JsonOk("{\"sid\":" + Quote(sid) + ",\"user\":" + user_json + "," +
+                  flat + "}");
   }
 
   Response Register(const Request& request) {
@@ -639,6 +676,13 @@ class WebApp {
     Item item = item_service_.CreateDraft(
         user->id, request.Param("category"), request.Param("title"),
         request.Param("description"), *price);
+    std::string image = request.Param("image");
+    if (!image.empty()) {
+      std::string url = SaveUpload(image, item.id);
+      if (!url.empty()) {
+        item = item_service_.SetImage(user->id, item.id, url);
+      }
+    }
     if (request.Param("submit") == "1") {
       item = item_service_.SubmitForReview(user->id, item.id);
     }
@@ -843,6 +887,66 @@ class WebApp {
     return JsonOk("{\"message\":\"已全部标记为已读\"}");
   }
 
+  // 保存 data URL 形式的图片，返回可访问的 URL。
+  std::string SaveUpload(const std::string& data_url,
+                         const std::string& item_id) {
+    const std::string prefix = "data:image/";
+    if (data_url.rfind(prefix, 0) != 0) {
+      throw DomainError(ErrorCode::kInvalidArgument, "图片格式不正确");
+    }
+    std::size_t comma = data_url.find("base64,");
+    if (comma == std::string::npos) {
+      throw DomainError(ErrorCode::kInvalidArgument, "图片格式不正确");
+    }
+    std::string mime = data_url.substr(prefix.size(), comma - prefix.size() - 7);
+    std::string extension = "png";
+    if (mime == "jpeg" || mime == "jpg") {
+      extension = "jpg";
+    } else if (mime == "webp") {
+      extension = "webp";
+    } else if (mime == "gif") {
+      extension = "gif";
+    }
+    std::vector<unsigned char> bytes = Base64Decode(data_url.substr(comma + 7));
+    if (bytes.empty()) {
+      throw DomainError(ErrorCode::kInvalidArgument, "图片内容为空");
+    }
+    if (bytes.size() > 3 * 1024 * 1024) {
+      throw DomainError(ErrorCode::kInvalidArgument, "图片不能超过 3MB");
+    }
+    std::filesystem::path dir = std::filesystem::path(data_dir_) / "uploads";
+    std::error_code error;
+    std::filesystem::create_directories(dir, error);
+    std::string name = item_id + "." + extension;
+    std::ofstream out((dir / name).string(), std::ios::binary | std::ios::trunc);
+    out.write(reinterpret_cast<const char*>(bytes.data()),
+              static_cast<std::streamsize>(bytes.size()));
+    out.close();
+    return "/uploads/" + name;
+  }
+
+  Response UploadFile(const std::string& path) const {
+    std::string name = path.substr(std::string("/uploads/").size());
+    if (name.empty() || name.find('/') != std::string::npos ||
+        name.find("..") != std::string::npos) {
+      return JsonError(400, "非法文件名");
+    }
+    std::string full =
+        (std::filesystem::path(data_dir_) / "uploads" / name).string();
+    std::ifstream in(full, std::ios::binary);
+    if (!in) {
+      return JsonError(404, "图片不存在");
+    }
+    std::ostringstream buffer;
+    buffer << in.rdbuf();
+    std::string extension = Lower(name.substr(name.rfind('.') + 1));
+    std::string content_type = "image/png";
+    if (extension == "jpg" || extension == "jpeg") content_type = "image/jpeg";
+    else if (extension == "webp") content_type = "image/webp";
+    else if (extension == "gif") content_type = "image/gif";
+    return {200, buffer.str(), content_type, ""};
+  }
+
   // ---------- 静态文件 ----------
 
   Response StaticFile(const std::string& path) const {
@@ -901,6 +1005,7 @@ class WebApp {
 
   std::mutex mutex_;
   std::map<std::string, std::string> sessions_;
+  std::string data_dir_;
   std::string web_root_;
 };
 

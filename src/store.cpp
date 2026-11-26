@@ -88,11 +88,13 @@ std::vector<std::string> ToFields(const Item& item) {
           ToString(item.status),
           FromInt(item.view_count),
           item.reject_reason,
+          item.image,
           FromInt(item.created_at),
           FromInt(item.updated_at)};
 }
 
 bool FromFields(const std::vector<std::string>& fields, Item* item) {
+  // 兼容旧数据：11 个字段时没有 image，时间字段前移。
   if (fields.size() < 11) {
     return false;
   }
@@ -105,8 +107,15 @@ bool FromFields(const std::vector<std::string>& fields, Item* item) {
   item->status = ParseItemStatus(fields[6]).value_or(ItemStatus::kDraft);
   item->view_count = static_cast<int>(ToInt(fields[7]));
   item->reject_reason = fields[8];
-  item->created_at = ToInt(fields[9]);
-  item->updated_at = ToInt(fields[10]);
+  if (fields.size() >= 12) {
+    item->image = fields[9];
+    item->created_at = ToInt(fields[10]);
+    item->updated_at = ToInt(fields[11]);
+  } else {
+    item->image.clear();
+    item->created_at = ToInt(fields[9]);
+    item->updated_at = ToInt(fields[10]);
+  }
   return true;
 }
 

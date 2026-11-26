@@ -79,6 +79,9 @@ class ItemService {
                    Money new_price);
   Item TakeOffline(const std::string& seller_id, const std::string& item_id,
                    const std::string& reason);
+  // 设置商品图片地址（仅本人商品，终态不允许修改）。
+  Item SetImage(const std::string& seller_id, const std::string& item_id,
+                const std::string& url);
   std::vector<Item> ListBySeller(const std::string& seller_id) const;
   std::vector<Item> ListByStatus(ItemStatus status) const;
   std::optional<Item> Find(const std::string& item_id) const;

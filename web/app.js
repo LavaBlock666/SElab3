@@ -1,8 +1,11 @@
 // 校园二手交易系统 —— 前端逻辑（原生 JS，无框架）
 
+const APP_VERSION = '2026-11-26.3';
+
 const state = {
   user: null,
   sid: sessionStorage.getItem("campus_sid") || "",
+  publishImage: '',
   screen: 'browse',
   categories: [],
   filters: { keyword: '', category: '', min: '', max: '', sort: 'latest', page: 1 },
@@ -131,18 +134,6 @@ function renderNavigation() {
   $('#nav').innerHTML = items.map((item) =>
     `<button class="nav-item ${state.screen === item.id ? 'active' : ''}" data-nav="${item.id}">${item.label}</button>`
   ).join('');
-  const sidebarScreens = ['seller', 'audit', 'reports', 'stats'];
-  const sidebar = $('#sidebar');
-  if (sidebarScreens.includes(state.screen)) {
-    sidebar.hidden = false;
-    sidebar.innerHTML = `<div class="sidebar-title">${state.user.is_admin ? '管理后台' : '卖家中心'}</div>` +
-      items.map((item) =>
-        `<button class="sidebar-item ${state.screen === item.id ? 'active' : ''}" data-nav="${item.id}">${item.label}</button>`
-      ).join('');
-  } else {
-    sidebar.hidden = true;
-    sidebar.innerHTML = '';
-  }
 }
 
 async function refreshNotifyDot() {
@@ -178,7 +169,11 @@ function go(screen, payload) {
 
 function renderBrowse(main) {
   main.innerHTML = `
-    <h1 class="page-title">全部商品</h1>
+    <div class="toolbar">
+      <h1 class="page-title" style="margin:0">全部商品</h1>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" id="b-refresh">刷新</button>
+    </div>
     <p class="page-sub" id="browse-sub">加载中…</p>
     <div class="browse-layout">
       <aside class="filters">
@@ -218,6 +213,7 @@ function renderBrowse(main) {
       </section>
     </div>`;
 
+  $('#b-refresh').addEventListener('click', () => loadItems());
   $('#f-apply').addEventListener('click', () => {
     state.filters.keyword = $('#f-keyword').value.trim();
     state.filters.category = $('#f-category').value;
@@ -247,7 +243,7 @@ async function loadItems() {
   } else {
     grid.innerHTML = data.items.map((item) => `
       <article class="product-card">
-        <div class="thumb">商品图片</div>
+        <div class="thumb">${item.image ? `<img src="${esc(item.image)}" alt="商品图片" />` : '商品图片'}</div>
         <div class="product-title">${esc(item.title)}</div>
         <div class="price">¥${esc(item.price)}</div>
         <div class="product-meta">
@@ -278,8 +274,6 @@ async function loadItems() {
   });
 }
 
-// ---------------------------------------------------------------- 商品详情
-
 async function renderDetail(main) {
   const item = await api('/api/item?id=' + encodeURIComponent(state.detailId));
   state.detail = item;
@@ -299,7 +293,7 @@ async function renderDetail(main) {
     <div class="toolbar"><button class="btn btn-ghost btn-sm" id="back">‹ 返回</button></div>
     <div class="detail-layout">
       <div>
-        <div class="detail-image">商品图片（占位）</div>
+        <div class="detail-image">${item.image ? `<img src="${esc(item.image)}" alt="商品图片" />` : '商品图片（占位）'}</div>
         <div class="card" style="margin-top:20px">
           <h3 style="margin:0 0 12px;font-size:15px">商品描述</h3>
           <p style="color:#646a73;line-height:1.9;margin:0">${esc(item.description)}</p>
@@ -322,9 +316,12 @@ async function renderDetail(main) {
         ${mine ? `<div class="notice" style="border-color:#f5dfb0;background:#fff9ec">
           <strong>你的预约状态：${esc(mine.status_label)}</strong><br />
           ${mine.status === 'confirmed'
-            ? '卖家已确认交易，线下交付后请到“我的预约”点“确认完成”。'
+            ? '卖家已确认交易，线下交付后点下面的“确认完成交易”即可结束订单。'
             : '正在等待卖家确认；确认前可在“我的预约”取消。'}
-          <br /><button class="btn btn-primary btn-sm" id="btn-myres" style="margin-top:10px">前往我的预约</button>
+          <div style="display:flex;gap:10px;margin-top:10px">
+            ${mine.status === 'confirmed' ? '<button class="btn btn-primary btn-sm" id="btn-complete">确认完成交易</button>' : ''}
+            <button class="btn btn-ghost btn-sm" id="btn-myres">前往我的预约</button>
+          </div>
         </div>` : ''}
         <div style="display:flex;gap:12px;margin-top:18px">
           ${canReserve ? '<button class="btn btn-primary" id="btn-reserve" style="padding:14px 40px">立即预约</button>' : ''}
@@ -334,6 +331,10 @@ async function renderDetail(main) {
       </div>
     </div>`;
   $('#back').addEventListener('click', () => go('browse'));
+  const complete = $('#btn-complete');
+  if (complete) {
+    complete.addEventListener('click', () => reservationAction(mine.id, 'complete'));
+  }
   const myResButton = $('#btn-myres');
   if (myResButton) {
     myResButton.addEventListener('click', () => go('reservations'));
@@ -398,22 +399,36 @@ function openReportModal(item) {
 
 async function renderReservations(main) {
   const list = await api('/api/reservations');
-  const rows = list.map((item) => `
-    <tr>
+  const rows = list.map((item) => {
+    let actions = '';
+    if (item.status === 'pending') {
+      actions = `<button class="btn btn-primary btn-sm" data-cancel="${esc(item.id)}">取消预约</button>
+                 <span style="color:#9aa0a6;font-size:12px;margin-left:8px">等待卖家确认</span>`;
+    } else if (item.status === 'confirmed') {
+      actions = `<button class="btn btn-primary btn-sm" data-complete="${esc(item.id)}">确认完成交易</button>`;
+    } else {
+      actions = '<span style="color:#9aa0a6;font-size:12px">无需操作</span>';
+    }
+    const chip = item.status === 'confirmed' ? 'chip-orange'
+      : item.status === 'pending' ? 'chip-blue' : 'chip-gray';
+    return `<tr>
       <td><strong>${esc(item.item_title)}</strong></td>
-      <td><span class="chip chip-blue">${esc(item.status_label)}</span></td>
+      <td><span class="chip ${chip}">${esc(item.status_label)}</span></td>
       <td>${esc(item.created_at)}</td>
-      <td>
-        ${item.status === 'pending' ? `<button class="btn btn-ghost btn-sm" data-cancel="${esc(item.id)}">取消预约</button>` : ''}
-        ${item.status === 'confirmed' ? `<button class="btn btn-primary btn-sm" data-complete="${esc(item.id)}">确认完成</button>` : ''}
-      </td>
-    </tr>`).join('');
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
   main.innerHTML = `
-    <h1 class="page-title">我的预约</h1>
-    <p class="page-sub">卖家确认前可取消；线下交付后点“确认完成”结束交易。</p>
+    <div class="toolbar">
+      <h1 class="page-title" style="margin:0">我的预约</h1>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" id="r-refresh">刷新</button>
+    </div>
+    <p class="page-sub">卖家确认前可取消；卖家确认后，线下交付完再点“确认完成交易”。</p>
     ${list.length ? `<table class="table">
       <thead><tr><th>商品</th><th>状态</th><th>预约时间</th><th>操作</th></tr></thead>
       <tbody>${rows}</tbody></table>` : '<div class="empty">还没有预约记录</div>'}`;
+  $('#r-refresh').addEventListener('click', () => renderReservations(main));
   main.querySelectorAll('[data-cancel]').forEach((button) => {
     button.addEventListener('click', () => reservationAction(button.dataset.cancel, 'cancel'));
   });
@@ -433,6 +448,24 @@ async function reservationAction(id, action) {
 }
 
 // ---------------------------------------------------------------- 发布商品
+
+function readImageFile(file, callback) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const image = new Image();
+    image.onload = () => {
+      const max = 900;
+      const scale = Math.min(1, max / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+      callback(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    image.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
 
 async function renderPublish(main) {
   main.innerHTML = `
@@ -457,6 +490,19 @@ async function renderPublish(main) {
           </div>
         </div>
         <div class="form-group">
+          <label>商品图片</label>
+          <div class="upload-row">
+            <label class="btn btn-ghost" style="cursor:pointer">
+              选择图片<input type="file" id="p-image" accept="image/*" hidden />
+            </label>
+            <button class="btn btn-ghost" id="p-image-clear" type="button">清除图片</button>
+            <span style="color:#9aa0a6;font-size:12px">支持 JPG/PNG，自动压缩到 900px 内</span>
+          </div>
+          <div id="p-preview" class="upload-preview">
+            ${state.publishImage ? `<img src="${state.publishImage}" alt="预览" />` : '未选择图片'}
+          </div>
+        </div>
+        <div class="form-group">
           <label>商品描述</label>
           <textarea class="textarea" id="p-desc" style="min-height:150px" placeholder="成色、使用情况、交易地点等"></textarea>
         </div>
@@ -472,7 +518,7 @@ async function renderPublish(main) {
             · 标题写清品类、型号与成色，避免出现联系方式。<br />
             · 同一商品请勿重复发布，重复发布将被驳回。<br />
             · 价格修改后需要重新提交审核。<br />
-            · 描述最多 500 字，图片暂以描述代替。
+            · 图片建议使用实物照片，最多一张。
           </p>
         </div>
         <div class="tip-card">
@@ -482,6 +528,25 @@ async function renderPublish(main) {
         </div>
       </aside>
     </div>`;
+
+  const preview = $('#p-preview');
+  const fileInput = $('#p-image');
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files && fileInput.files[0];
+    if (!file) {
+      return;
+    }
+    readImageFile(file, (dataUrl) => {
+      state.publishImage = dataUrl;
+      preview.innerHTML = `<img src="${dataUrl}" alt="预览" />`;
+    });
+  });
+  $('#p-image-clear').addEventListener('click', () => {
+    state.publishImage = '';
+    fileInput.value = '';
+    preview.textContent = '未选择图片';
+  });
+
   const submit = async (withSubmit) => {
     try {
       await api('/api/seller/item', {
@@ -491,9 +556,11 @@ async function renderPublish(main) {
           category: $('#p-category').value,
           price: $('#p-price').value.trim(),
           description: $('#p-desc').value.trim(),
+          image: state.publishImage,
           submit: withSubmit ? '1' : '0'
         }
       });
+      state.publishImage = '';
       toast(withSubmit ? '已提交审核' : '草稿已保存');
       go('seller');
     } catch (error) {
@@ -510,7 +577,11 @@ async function renderSeller(main) {
   const data = await api('/api/seller/summary');
   const stats = data.stats;
   main.innerHTML = `
-    <h1 class="page-title">我的商品</h1>
+    <div class="toolbar">
+      <h1 class="page-title" style="margin:0">我的商品</h1>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" id="s-refresh">刷新</button>
+    </div>
     <p class="page-sub">管理在售、待审核与已完成的商品</p>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">在售中</div><div class="kpi-value">${stats.published}</div><div class="kpi-hint">已发布</div></div>
@@ -523,6 +594,7 @@ async function renderSeller(main) {
       <button class="tab-button ${state.sellerTab === 'reservations' ? 'active' : ''}" data-tab="reservations">待确认预约 (${data.reservations.length})</button>
     </div>
     <div id="seller-body"></div>`;
+  $('#s-refresh').addEventListener('click', () => renderSeller(main));
   main.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => {
       state.sellerTab = button.dataset.tab;
@@ -562,7 +634,12 @@ async function renderSeller(main) {
   }
   body.innerHTML = `<table class="table"><thead><tr><th>商品</th><th>价格</th><th>状态</th><th>浏览</th><th>操作</th></tr></thead><tbody>
     ${data.items.map((item) => `<tr>
-      <td><strong>${esc(item.title)}</strong><br /><span style="color:#9aa0a6;font-size:12px">${esc(item.id)}</span></td>
+      <td>
+        <div class="cell-item">
+          <span class="cell-thumb">${item.image ? `<img src="${esc(item.image)}" alt="" />` : '无图'}</span>
+          <span><strong>${esc(item.title)}</strong><br /><span style="color:#9aa0a6;font-size:12px">${esc(item.id)}</span></span>
+        </div>
+      </td>
       <td class="price">¥${esc(item.price)}</td>
       <td>${statusChip(item)}</td>
       <td>${item.views}</td>
@@ -600,12 +677,17 @@ async function renderAudit(main) {
   state.audit = await api('/api/audit');
   state.auditIndex = state.audit.length ? 0 : -1;
   main.innerHTML = `
-    <h1 class="page-title">商品审核</h1>
+    <div class="toolbar">
+      <h1 class="page-title" style="margin:0">商品审核</h1>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" id="a-refresh">刷新</button>
+    </div>
     <p class="page-sub">待审核 ${state.audit.length} 件 · 驳回必须填写理由</p>
     <div class="split">
       <div id="audit-list"></div>
       <div id="audit-detail"></div>
     </div>`;
+  $('#a-refresh').addEventListener('click', () => renderAudit(main));
   renderAuditList(main);
 }
 
@@ -641,6 +723,7 @@ function renderAuditDetail(main) {
     return;
   }
   panel.innerHTML = `<div class="card">
+    ${item.image ? `<div class="audit-image"><img src="${esc(item.image)}" alt="商品图片" /></div>` : ''}
     <h2 style="margin:0 0 10px;font-size:19px">${esc(item.title)}</h2>
     <div class="price" style="font-size:22px">¥${esc(item.price)}</div>
     <div class="meta-list">
@@ -678,12 +761,17 @@ async function renderReports(main) {
   state.reports = await api('/api/reports');
   state.reportIndex = state.reports.length ? 0 : -1;
   main.innerHTML = `
-    <h1 class="page-title">举报处理</h1>
+    <div class="toolbar">
+      <h1 class="page-title" style="margin:0">举报处理</h1>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" id="rp-refresh">刷新</button>
+    </div>
     <p class="page-sub">待处理 ${state.reports.length} 条 · 判定成立将下架商品并作废预约</p>
     <div class="split">
       <div id="report-list"></div>
       <div id="report-detail"></div>
     </div>`;
+  $('#rp-refresh').addEventListener('click', () => renderReports(main));
   renderReportList(main);
 }
 
@@ -765,7 +853,11 @@ async function renderStats(main) {
   });
   const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`).join(' ');
   main.innerHTML = `
-    <h1 class="page-title">统计报表</h1>
+    <div class="toolbar">
+      <h1 class="page-title" style="margin:0">统计报表</h1>
+      <div class="spacer"></div>
+      <button class="btn btn-ghost btn-sm" id="st-refresh">刷新</button>
+    </div>
     <p class="page-sub">统计口径：已取消预约不计入成功，已下架不计入已发布</p>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">新增商品</div><div class="kpi-value">${stats.new_items}</div><div class="kpi-hint">近 7 天</div></div>
@@ -814,6 +906,7 @@ async function renderStats(main) {
         </tr>`).join('') || '<tr><td colspan="4" class="empty">暂无日志</td></tr>'}
       </tbody>
     </table>`;
+  $('#st-refresh').addEventListener('click', () => renderStats(main));
   $('#log-target').addEventListener('change', (event) => {
     state.logTarget = event.target.value;
     renderStats(main);
@@ -881,10 +974,20 @@ $('#login-form').addEventListener('submit', async (event) => {
       method: 'POST',
       body: { account: form.get('account'), password: form.get('password') }
     });
+    if (!payload.sid) {
+      toast('服务端版本过旧，请重启服务并刷新页面', true);
+      return;
+    }
+    const user = payload.user || payload;
+    if (!user || !user.email) {
+      clearSession();
+      toast('登录响应异常，请刷新页面重试', true);
+      return;
+    }
     state.sid = payload.sid;
     sessionStorage.setItem('campus_sid', payload.sid);
-    await showApp(payload.user);
-    toast('登录成功，欢迎 ' + payload.user.email);
+    await showApp(user);
+    toast('登录成功，欢迎 ' + user.email);
   } catch (error) {
     toast(error.message, true);
   }
@@ -928,8 +1031,16 @@ $('#btn-logout').addEventListener('click', async () => {
 
 $('#btn-notify').addEventListener('click', openNotifications);
 
-// 启动：检查是否已登录
+// 启动：检查是否已登录，并对比前后端版本，提示刷新旧页面
 (async function boot() {
+  try {
+    const version = await api('/api/version');
+    if (version && version.version !== APP_VERSION) {
+      toast('检测到新版本，请按 Ctrl+F5 刷新页面', true);
+    }
+  } catch (error) {
+    /* 旧服务端可能没有该接口，忽略 */
+  }
   try {
     const user = await api('/api/me');
     if (user) {
