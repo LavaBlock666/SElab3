@@ -36,10 +36,10 @@ build\campus_market_web.exe --data data
 
 | 角色 | 账号 | 密码 |
 |---|---|---|
-| 管理员 | admin@campus.edu | Admin@123 |
-| 卖家 | seller@campus.edu | Seller@123 |
-| 买家 | buyer@campus.edu | Buyer@123 |
-| 买家 | buyer2@campus.edu | Buyer@123 |
+| 管理员 | `admin@campus.edu` | `Admin@123` |
+| 卖家 | `seller@campus.edu` | `Seller@123` |
+| 买家 | `buyer@campus.edu` | `Buyer@123` |
+| 买家 | `buyer2@campus.edu` | `Buyer@123` |
 
 ## 界面
 
