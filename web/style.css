@@ -1455,3 +1455,17 @@ html {
   flex: none;
   height: 120px;
 }
+
+/* 浏览页分页贴底：右侧列拉伸到整列高度 */
+#app-view.screen-browse .browse-layout {
+  align-items: stretch;
+}
+
+#app-view.screen-browse .browse-layout > section {
+  height: 100%;
+}
+
+/* 有滚动条时才显示，但始终预留位置 */
+html {
+  overflow-y: auto;
+}
