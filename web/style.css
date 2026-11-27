@@ -1317,3 +1317,79 @@ button {
 #app-view.screen-detail .main {
   padding-bottom: 92px;
 }
+
+/* 浏览卡片底行与分页空间 */
+#app-view.screen-browse .product-foot {
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+#app-view.screen-browse .product-meta {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+#app-view.screen-browse .product-foot .btn {
+  padding: 6px 10px;
+}
+
+#app-view.screen-browse .pager {
+  margin-top: 8px;
+}
+
+/* 发布页：左侧窄一点，右侧规范不换行 */
+#app-view.screen-publish .publish-layout {
+  grid-template-columns: minmax(0, 1fr) 400px;
+}
+
+#app-view.screen-publish .tips-list li {
+  white-space: nowrap;
+}
+
+/* 发布页：表单撑满，描述自适应，按钮贴底 */
+#app-view.screen-publish .form-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+#app-view.screen-publish .desc-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#app-view.screen-publish .desc-group .textarea {
+  flex: 1;
+  height: auto;
+  min-height: 80px;
+}
+
+#app-view.screen-publish .publish-actions {
+  margin-top: auto;
+}
+
+/* 图片上传：左侧按钮竖排，右侧 16:9 预览 */
+.upload-block {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.upload-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.upload-actions .btn {
+  width: 100%;
+}
+
+#app-view.screen-publish .upload-preview {
+  margin-top: 0;
+  height: auto;
+  aspect-ratio: 16 / 9;
+}

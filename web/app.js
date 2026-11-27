@@ -276,11 +276,11 @@ async function loadItems(notifyEmpty = false) {
       <div class="thumb">${item.image ? `<img src="${esc(item.image)}" alt="商品图片" />` : '暂无图片'}</div>
       <div class="product-title">${esc(item.title)}</div>
       <div class="price">¥${esc(item.price)}</div>
-      <div class="product-meta">
-        <span class="chip chip-gray">${esc(item.category)}</span>
-        <span class="chip chip-gray">浏览 ${item.views}</span>
-      </div>
-      <div class="product-foot" style="justify-content:flex-end">
+      <div class="product-foot">
+        <div class="product-meta" style="margin:0">
+          <span class="chip chip-gray">${esc(item.category)}</span>
+          <span class="chip chip-gray">浏览 ${item.views}</span>
+        </div>
         <button class="btn btn-ghost btn-sm" data-detail="${esc(item.id)}">查看详情</button>
       </div>
     </article>`).join('');
@@ -577,21 +577,23 @@ async function renderPublish(main) {
         </div>
         <div class="form-group">
           <label>商品图片</label>
-          <div class="upload-row">
-            <button class="btn btn-ghost upload-btn" id="p-pick" type="button">选择图片</button>
-            <button class="btn btn-ghost upload-btn" id="p-image-clear" type="button">清除图片</button>
-            <input type="file" id="p-image" accept="image/*" hidden />
-            <span class="upload-hint">支持 JPG/PNG，自动压缩到 900px 内</span>
-          </div>
-          <div id="p-preview" class="upload-preview">
-            ${state.publishImage ? `<img src="${state.publishImage}" alt="预览" />` : '未选择图片'}
+          <div class="upload-block">
+            <div class="upload-actions">
+              <button class="btn btn-ghost upload-btn" id="p-pick" type="button">选择图片</button>
+              <button class="btn btn-ghost upload-btn" id="p-image-clear" type="button">清除图片</button>
+              <span class="upload-hint">支持 JPG/PNG</span>
+              <input type="file" id="p-image" accept="image/*" hidden />
+            </div>
+            <div id="p-preview" class="upload-preview">
+              ${state.publishImage ? `<img src="${state.publishImage}" alt="预览" />` : '暂无图片'}
+            </div>
           </div>
         </div>
-        <div class="form-group">
+        <div class="form-group desc-group">
           <label>商品描述</label>
-          <textarea class="textarea" id="p-desc" style="height:120px" placeholder="成色、使用情况、交易地点等"></textarea>
+          <textarea class="textarea" id="p-desc" placeholder="成色、使用情况、交易地点等"></textarea>
         </div>
-        <div style="display:flex;gap:12px">
+        <div class="publish-actions" style="display:flex;gap:12px">
           <button class="btn btn-ghost" id="p-draft" style="padding:13px 28px">保存草稿</button>
           <button class="btn btn-primary" id="p-submit" style="padding:13px 40px">提交审核</button>
         </div>
@@ -763,6 +765,13 @@ async function renderAudit(main) {
   state.audit = await api('/api/audit');
   state.audit.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   state.auditIndex = state.audit.length ? 0 : -1;
+  if (!state.audit.length) {
+    main.innerHTML = `
+      <h1 class="page-title">商品审核</h1>
+      <p class="page-sub">待审核 0 件 · 驳回必须填写理由</p>
+      <div class="empty">没有待审核商品</div>`;
+    return;
+  }
   main.innerHTML = `
     <h1 class="page-title">商品审核</h1>
     <p class="page-sub">待审核 ${state.audit.length} 件 · 驳回必须填写理由</p>
@@ -845,6 +854,13 @@ async function renderReports(main) {
   state.reports = await api('/api/reports');
   state.reports.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   state.reportIndex = state.reports.length ? 0 : -1;
+  if (!state.reports.length) {
+    main.innerHTML = `
+      <h1 class="page-title">举报处理</h1>
+      <p class="page-sub">待处理 0 条 · 判定成立将下架商品并作废预约</p>
+      <div class="empty">没有待处理举报</div>`;
+    return;
+  }
   main.innerHTML = `
     <h1 class="page-title">举报处理</h1>
     <p class="page-sub">待处理 ${state.reports.length} 条 · 判定成立将下架商品并作废预约</p>
