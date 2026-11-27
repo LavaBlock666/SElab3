@@ -1,6 +1,6 @@
 // 校园二手交易系统 —— 前端逻辑（原生 JS，无框架）
 
-const APP_VERSION = '2026-11-27.1';
+const APP_VERSION = '2026-11-27.2';
 
 const state = {
   user: null,
@@ -103,12 +103,14 @@ function showLogin() {
   state.user = null;
   $('#app-view').hidden = true;
   $('#login-view').hidden = false;
+  $('#global-refresh').hidden = true;
 }
 
 async function showApp(user) {
   state.user = user;
   $('#login-view').hidden = true;
   $('#app-view').hidden = false;
+  $('#global-refresh').hidden = false;
   $('#user-email').textContent = user.email;
   state.categories = await api('/api/categories');
   refreshNotifyDot();
@@ -153,6 +155,10 @@ function go(screen, payload) {
     state.detailReturn = state.screen;
   }
   state.screen = screen;
+  const fab = document.querySelector('#global-refresh');
+  if (fab) {
+    fab.hidden = screen === 'publish';
+  }
   if (screen === 'detail') state.detailId = payload;
   renderNavigation();
   const main = $('#main');
@@ -173,11 +179,7 @@ function go(screen, payload) {
 
 function renderBrowse(main) {
   main.innerHTML = `
-    <div class="toolbar">
-      <h1 class="page-title" style="margin:0">全部商品</h1>
-      <div class="spacer"></div>
-      <button class="btn btn-ghost btn-sm" id="b-refresh">刷新</button>
-    </div>
+    <h1 class="page-title">全部商品</h1>
     <p class="page-sub" id="browse-sub">加载中…</p>
     <div class="browse-layout">
       <aside class="filters">
@@ -217,7 +219,6 @@ function renderBrowse(main) {
       </section>
     </div>`;
 
-  $('#b-refresh').addEventListener('click', () => loadItems());
   $('#f-apply').addEventListener('click', () => {
     state.filters.keyword = $('#f-keyword').value.trim();
     state.filters.category = $('#f-category').value;
@@ -269,7 +270,22 @@ async function loadItems() {
   pager.innerHTML = `
     <span>第 ${data.page} / ${data.total_pages} 页</span>
     <button class="btn btn-ghost btn-sm" id="prev-page" ${data.page <= 1 ? 'disabled' : ''}>上一页</button>
-    <button class="btn btn-ghost btn-sm" id="next-page" ${data.page >= data.total_pages ? 'disabled' : ''}>下一页</button>`;
+    <button class="btn btn-ghost btn-sm" id="next-page" ${data.page >= data.total_pages ? 'disabled' : ''}>下一页</button>
+    <span>跳至</span>
+    <input class="input page-input" id="page-input" type="number" min="1" max="${data.total_pages}" value="${data.page}" />
+    <button class="btn btn-primary btn-sm" id="page-go">跳转</button>`;
+  const jumpToPage = () => {
+    const value = Number($('#page-input').value);
+    if (!Number.isFinite(value)) {
+      return;
+    }
+    state.filters.page = Math.min(Math.max(1, Math.floor(value)), data.total_pages);
+    loadItems();
+  };
+  $('#page-go').addEventListener('click', jumpToPage);
+  $('#page-input').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') jumpToPage();
+  });
   $('#prev-page').addEventListener('click', () => {
     state.filters.page = Math.max(1, state.filters.page - 1);
     loadItems();
@@ -290,6 +306,7 @@ async function renderDetail(main) {
   if (state.user && state.user.is_buyer && !isOwner) {
     try {
       const list = await api('/api/reservations');
+  list.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
       mine = list.find((entry) => entry.item_id === item.id &&
         (entry.status === 'pending' || entry.status === 'confirmed'));
     } catch (error) {
@@ -447,6 +464,7 @@ function openReportModal(item) {
 
 async function renderReservations(main) {
   const list = await api('/api/reservations');
+  list.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   const rows = list.map((item) => {
     let actions = '';
     if (item.status === 'pending') {
@@ -467,17 +485,12 @@ async function renderReservations(main) {
     </tr>`;
   }).join('');
   main.innerHTML = `
-    <div class="toolbar">
-      <h1 class="page-title" style="margin:0">我的预约</h1>
-      <div class="spacer"></div>
-      <button class="btn btn-ghost btn-sm" id="r-refresh">刷新</button>
-    </div>
+    <h1 class="page-title">我的预约</h1>
     <p class="page-sub">卖家确认前可取消；卖家确认后，线下交付完再点“确认完成交易”。</p>
     ${list.length ? `<table class="table fixed">
       <colgroup><col style="width:40%"><col style="width:14%"><col style="width:24%"><col style="width:22%"></colgroup>
       <thead><tr><th>商品</th><th>状态</th><th>预约时间</th><th>操作</th></tr></thead>
       <tbody>${rows}</tbody></table>` : '<div class="empty">还没有预约记录</div>'}`;
-  $('#r-refresh').addEventListener('click', () => renderReservations(main));
   main.querySelectorAll('[data-cancel]').forEach((button) => {
     button.addEventListener('click', () => reservationAction(button.dataset.cancel, 'cancel'));
   });
@@ -541,11 +554,10 @@ async function renderPublish(main) {
         <div class="form-group">
           <label>商品图片</label>
           <div class="upload-row">
-            <label class="btn btn-ghost upload-btn">
-              选择图片<input type="file" id="p-image" accept="image/*" hidden />
-            </label>
+            <button class="btn btn-ghost upload-btn" id="p-pick" type="button">选择图片</button>
             <button class="btn btn-ghost upload-btn" id="p-image-clear" type="button">清除图片</button>
-            <span style="color:#9aa0a6;font-size:12px">支持 JPG/PNG，自动压缩到 900px 内</span>
+            <input type="file" id="p-image" accept="image/*" hidden />
+            <span class="upload-hint">支持 JPG/PNG，自动压缩到 900px 内</span>
           </div>
           <div id="p-preview" class="upload-preview">
             ${state.publishImage ? `<img src="${state.publishImage}" alt="预览" />` : '未选择图片'}
@@ -580,6 +592,7 @@ async function renderPublish(main) {
 
   const preview = $('#p-preview');
   const fileInput = $('#p-image');
+  $('#p-pick').addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', () => {
     const file = fileInput.files && fileInput.files[0];
     if (!file) {
@@ -624,13 +637,11 @@ async function renderPublish(main) {
 
 async function renderSeller(main) {
   const data = await api('/api/seller/summary');
+  data.items.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  data.reservations.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   const stats = data.stats;
   main.innerHTML = `
-    <div class="toolbar">
-      <h1 class="page-title" style="margin:0">我的商品</h1>
-      <div class="spacer"></div>
-      <button class="btn btn-ghost btn-sm" id="s-refresh">刷新</button>
-    </div>
+    <h1 class="page-title">我的商品</h1>
     <p class="page-sub">管理在售、待审核与已完成的商品</p>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">在售中</div><div class="kpi-value">${stats.published}</div><div class="kpi-hint">已发布</div></div>
@@ -643,7 +654,6 @@ async function renderSeller(main) {
       <button class="tab-button ${state.sellerTab === 'reservations' ? 'active' : ''}" data-tab="reservations">待确认预约 (${data.reservations.length})</button>
     </div>
     <div id="seller-body"></div>`;
-  $('#s-refresh').addEventListener('click', () => renderSeller(main));
   main.querySelectorAll('[data-tab]').forEach((button) => {
     button.addEventListener('click', () => {
       state.sellerTab = button.dataset.tab;
@@ -728,19 +738,15 @@ async function sellerAction(id, action, main) {
 
 async function renderAudit(main) {
   state.audit = await api('/api/audit');
+  state.audit.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   state.auditIndex = state.audit.length ? 0 : -1;
   main.innerHTML = `
-    <div class="toolbar">
-      <h1 class="page-title" style="margin:0">商品审核</h1>
-      <div class="spacer"></div>
-      <button class="btn btn-ghost btn-sm" id="a-refresh">刷新</button>
-    </div>
+    <h1 class="page-title">商品审核</h1>
     <p class="page-sub">待审核 ${state.audit.length} 件 · 驳回必须填写理由</p>
     <div class="split">
       <div id="audit-list"></div>
       <div id="audit-detail"></div>
     </div>`;
-  $('#a-refresh').addEventListener('click', () => renderAudit(main));
   renderAuditList(main);
 }
 
@@ -814,19 +820,15 @@ async function auditAction(id, action, reason, main) {
 
 async function renderReports(main) {
   state.reports = await api('/api/reports');
+  state.reports.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   state.reportIndex = state.reports.length ? 0 : -1;
   main.innerHTML = `
-    <div class="toolbar">
-      <h1 class="page-title" style="margin:0">举报处理</h1>
-      <div class="spacer"></div>
-      <button class="btn btn-ghost btn-sm" id="rp-refresh">刷新</button>
-    </div>
+    <h1 class="page-title">举报处理</h1>
     <p class="page-sub">待处理 ${state.reports.length} 条 · 判定成立将下架商品并作废预约</p>
     <div class="split">
       <div id="report-list"></div>
       <div id="report-detail"></div>
     </div>`;
-  $('#rp-refresh').addEventListener('click', () => renderReports(main));
   renderReportList(main);
 }
 
@@ -908,11 +910,7 @@ async function renderStats(main) {
   });
   const path = points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x},${point.y}`).join(' ');
   main.innerHTML = `
-    <div class="toolbar">
-      <h1 class="page-title" style="margin:0">统计报表</h1>
-      <div class="spacer"></div>
-      <button class="btn btn-ghost btn-sm" id="st-refresh">刷新</button>
-    </div>
+    <h1 class="page-title">统计报表</h1>
     <p class="page-sub">统计口径：已取消预约不计入成功，已下架不计入已发布</p>
     <div class="kpi-grid">
       <div class="kpi"><div class="kpi-label">新增商品</div><div class="kpi-value">${stats.new_items}</div><div class="kpi-hint">近 7 天</div></div>
@@ -962,7 +960,6 @@ async function renderStats(main) {
         </tr>`).join('') || '<tr><td colspan="4" class="empty">暂无日志</td></tr>'}
       </tbody>
     </table>`;
-  $('#st-refresh').addEventListener('click', () => renderStats(main));
   $('#log-target').addEventListener('change', (event) => {
     state.logTarget = event.target.value;
     renderStats(main);
@@ -1072,6 +1069,17 @@ document.addEventListener('click', (event) => {
   const nav = event.target.closest('[data-nav]');
   if (nav) {
     go(nav.dataset.nav);
+  }
+});
+
+$('#global-refresh').addEventListener('click', () => {
+  if (!state.user) {
+    return;
+  }
+  if (state.screen === 'detail') {
+    go('detail', state.detailId);
+  } else {
+    go(state.screen);
   }
 });
 

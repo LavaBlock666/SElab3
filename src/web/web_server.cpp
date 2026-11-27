@@ -366,7 +366,7 @@ class WebApp {
     const std::string& method = request.method;
 
     if (method == "GET" && path == "/api/version") {
-      return JsonOk("{\"version\":\"2026-11-27.1\"}");
+      return JsonOk("{\"version\":\"2026-11-27.2\"}");
     }
     if (method == "GET" && path == "/api/categories") {
       return CategoriesJson();
@@ -501,17 +501,14 @@ class WebApp {
   Response ItemDetailJson(const Request& request) {
     std::string id = request.Param("id");
     auto viewer = CurrentUser(request);
-    // 管理员查看详情不计入浏览次数。
-    Item item;
-    if (viewer && viewer->HasRole(Role::kAdmin)) {
-      auto found = items_.FindById(id);
-      if (!found) {
-        throw DomainError(ErrorCode::kNotFound, "商品不存在");
-      }
-      item = *found;
-    } else {
-      item = search_service_.ViewDetail(id);
+    auto found = items_.FindById(id);
+    if (!found) {
+      throw DomainError(ErrorCode::kNotFound, "商品不存在");
     }
+    // 管理员与商品卖家自己查看详情都不计入浏览次数。
+    bool skip_count = viewer && (viewer->HasRole(Role::kAdmin) ||
+                                 viewer->id == found->seller_id);
+    Item item = skip_count ? *found : search_service_.ViewDetail(id);
     auto category = categories_.FindById(item.category_id);
     auto seller = users_.FindById(item.seller_id);
     std::ostringstream out;
