@@ -366,7 +366,7 @@ class WebApp {
     const std::string& method = request.method;
 
     if (method == "GET" && path == "/api/version") {
-      return JsonOk("{\"version\":\"2026-11-27.2\"}");
+      return JsonOk("{\"version\":\"2026-11-27.3\"}");
     }
     if (method == "GET" && path == "/api/categories") {
       return CategoriesJson();

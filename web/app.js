@@ -1,6 +1,6 @@
 // 校园二手交易系统 —— 前端逻辑（原生 JS，无框架）
 
-const APP_VERSION = '2026-11-27.2';
+const APP_VERSION = '2026-11-27.3';
 
 const state = {
   user: null,
@@ -155,6 +155,10 @@ function go(screen, payload) {
     state.detailReturn = state.screen;
   }
   state.screen = screen;
+  const appView = document.querySelector('#app-view');
+  if (appView) {
+    appView.className = 'app screen-' + screen;
+  }
   const fab = document.querySelector('#global-refresh');
   if (fab) {
     fab.hidden = screen === 'publish';
@@ -212,6 +216,7 @@ function renderBrowse(main) {
           </select>
         </div>
         <button class="btn btn-primary" id="f-apply" style="width:100%">应用筛选</button>
+        <button class="btn btn-ghost" id="f-clear" style="width:100%;margin-top:10px">清除筛选</button>
       </aside>
       <section>
         <div class="grid" id="grid"><div class="loading">加载中…</div></div>
@@ -219,14 +224,29 @@ function renderBrowse(main) {
       </section>
     </div>`;
 
+  const validPrice = (text) => text === '' || /^\d+(\.\d{1,2})?$/.test(text);
   $('#f-apply').addEventListener('click', () => {
+    const min = $('#f-min').value.trim();
+    const max = $('#f-max').value.trim();
+    if (!validPrice(min) || !validPrice(max)) {
+      toast('价格只能填写非负数字，最多两位小数', true);
+      return;
+    }
+    if (min && max && Number(min) > Number(max)) {
+      toast('最低价不能高于最高价', true);
+      return;
+    }
     state.filters.keyword = $('#f-keyword').value.trim();
     state.filters.category = $('#f-category').value;
-    state.filters.min = $('#f-min').value.trim();
-    state.filters.max = $('#f-max').value.trim();
+    state.filters.min = min;
+    state.filters.max = max;
     state.filters.sort = $('#f-sort').value;
     state.filters.page = 1;
-    loadItems();
+    loadItems(true);
+  });
+  $('#f-clear').addEventListener('click', () => {
+    state.filters = { keyword: '', category: '', min: '', max: '', sort: 'latest', page: 1 };
+    go('browse');
   });
   $('#f-keyword').addEventListener('keydown', (event) => {
     if (event.key === 'Enter') $('#f-apply').click();
@@ -234,7 +254,7 @@ function renderBrowse(main) {
   loadItems();
 }
 
-async function loadItems() {
+async function loadItems(notifyEmpty = false) {
   const params = new URLSearchParams({
     keyword: state.filters.keyword, category: state.filters.category,
     min: state.filters.min, max: state.filters.max,
@@ -246,7 +266,9 @@ async function loadItems() {
   if (!data.items.length) {
     grid.innerHTML = '';
     $('#pager').innerHTML = '';
-    toast('没有符合条件的商品', 'info');
+    if (notifyEmpty) {
+      toast('没有符合条件的商品', 'info');
+    }
     return;
   }
   grid.innerHTML = data.items.map((item) => `
@@ -258,8 +280,7 @@ async function loadItems() {
         <span class="chip chip-gray">${esc(item.category)}</span>
         <span class="chip chip-gray">浏览 ${item.views}</span>
       </div>
-      <div class="product-foot">
-        ${statusChip(item)}
+      <div class="product-foot" style="justify-content:flex-end">
         <button class="btn btn-ghost btn-sm" data-detail="${esc(item.id)}">查看详情</button>
       </div>
     </article>`).join('');
@@ -275,11 +296,14 @@ async function loadItems() {
     <input class="input page-input" id="page-input" type="number" min="1" max="${data.total_pages}" value="${data.page}" />
     <button class="btn btn-primary btn-sm" id="page-go">跳转</button>`;
   const jumpToPage = () => {
-    const value = Number($('#page-input').value);
-    if (!Number.isFinite(value)) {
+    const raw = $('#page-input').value.trim();
+    const value = Number(raw);
+    if (!raw || !Number.isInteger(value) || value < 1 || value > data.total_pages) {
+      toast(`请输入 1-${data.total_pages} 之间的页码`, true);
+      $('#page-input').value = data.page;
       return;
     }
-    state.filters.page = Math.min(Math.max(1, Math.floor(value)), data.total_pages);
+    state.filters.page = value;
     loadItems();
   };
   $('#page-go').addEventListener('click', jumpToPage);
@@ -565,27 +589,26 @@ async function renderPublish(main) {
         </div>
         <div class="form-group">
           <label>商品描述</label>
-          <textarea class="textarea" id="p-desc" style="min-height:150px" placeholder="成色、使用情况、交易地点等"></textarea>
+          <textarea class="textarea" id="p-desc" style="height:120px" placeholder="成色、使用情况、交易地点等"></textarea>
         </div>
         <div style="display:flex;gap:12px">
           <button class="btn btn-ghost" id="p-draft" style="padding:13px 28px">保存草稿</button>
           <button class="btn btn-primary" id="p-submit" style="padding:13px 40px">提交审核</button>
         </div>
       </section>
-      <aside>
-        <div class="card" style="margin-bottom:18px">
-          <h3 style="margin:0 0 14px;font-size:15px">发布规范</h3>
-          <p style="color:#646a73;line-height:2;margin:0;font-size:13px">
-            · 标题写清品类、型号与成色，避免出现联系方式。<br />
-            · 同一商品请勿重复发布，重复发布将被驳回。<br />
-            · 价格修改后需要重新提交审核。<br />
-            · 图片建议使用实物照片，最多一张。
-          </p>
+      <aside class="publish-side">
+        <div class="card">
+          <h3 class="side-title">发布规范</h3>
+          <ul class="tips-list">
+            <li>标题写清品类、型号与成色，避免出现联系方式。</li>
+            <li>同一商品请勿重复发布，重复发布将被驳回。</li>
+            <li>价格修改后需要重新提交审核。</li>
+            <li>图片建议使用实物照片，最多一张。</li>
+          </ul>
         </div>
         <div class="tip-card">
-          <strong>审核说明</strong><br />
-          提交后进入管理员待审核列表，一般 1 个工作日内完成审核。<br />
-          驳回时会给出理由，可在草稿中修改后重新提交。
+          <strong>审核说明</strong>
+          <p class="tip-text">提交后进入管理员待审核列表，一般 1 个工作日内完成审核。驳回时会给出理由，可在草稿中修改后重新提交。</p>
         </div>
       </aside>
     </div>`;

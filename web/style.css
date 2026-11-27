@@ -1122,3 +1122,157 @@ button {
 .refresh-fab:hover {
   filter: brightness(1.05);
 }
+
+/* ---------------- 浏览 / 发布页面布局 ---------------- */
+
+#app-view.screen-browse,
+#app-view.screen-publish {
+  height: calc(100vh - 64px);
+  overflow: hidden;
+}
+
+#app-view.screen-browse .main,
+#app-view.screen-publish .main {
+  height: 100%;
+  padding: 18px 28px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#app-view.screen-browse .browse-layout {
+  flex: 1;
+  min-height: 0;
+}
+
+#app-view.screen-browse .browse-layout > section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#app-view.screen-browse .grid {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 0;
+}
+
+#app-view.screen-browse .product-card {
+  padding: 10px;
+}
+
+#app-view.screen-browse .thumb {
+  min-height: 0;
+}
+
+#app-view.screen-browse .product-title {
+  margin: 8px 0 4px;
+  font-size: 14px;
+}
+
+#app-view.screen-browse .pager {
+  margin-top: 10px;
+  flex: none;
+}
+
+#app-view.screen-browse .filters {
+  position: static;
+  max-height: 100%;
+  overflow: auto;
+}
+
+#app-view.screen-publish .publish-layout {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: stretch;
+}
+
+#app-view.screen-publish .form-card {
+  overflow: hidden;
+}
+
+#app-view.screen-publish .publish-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.side-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.tips-list {
+  margin: 0;
+  padding-left: 18px;
+  color: #646a73;
+  font-size: 13px;
+  line-height: 2;
+}
+
+.tip-text {
+  margin: 8px 0 0;
+  color: #8a6420;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+/* 输入框不可拉伸 */
+.textarea {
+  resize: none;
+}
+
+/* 刷新按钮改为普通按钮，左下角与分页同一水平线 */
+.refresh-fab {
+  position: fixed;
+  left: 28px;
+  bottom: 14px;
+  z-index: 80;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: none;
+}
+
+.refresh-fab:hover {
+  background: #f7f9fc;
+  filter: none;
+}
+
+/* 发布页紧凑排版与分页对齐 */
+#app-view.screen-publish .form-card {
+  padding: 18px;
+}
+
+#app-view.screen-publish .form-group {
+  margin-bottom: 12px;
+}
+
+#app-view.screen-publish .upload-preview {
+  height: 110px;
+}
+
+.pager {
+  min-height: 38px;
+}
+
+.pager .btn,
+.page-input {
+  height: 38px;
+}
+
+.pager .btn {
+  padding: 0 14px;
+}
