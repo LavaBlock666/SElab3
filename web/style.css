@@ -1522,3 +1522,29 @@ html {
   z-index: 40;
   pointer-events: none;
 }
+
+/* 顶栏背景覆盖滚动条预留区：用根元素背景绘制，保证右上角无缝隙 */
+html {
+  background-color: var(--bg);
+  background-image: linear-gradient(
+    to bottom,
+    var(--surface) 0,
+    var(--surface) 64px,
+    var(--border) 64px,
+    var(--border) 65px,
+    var(--bg) 65px
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: 100% 100%;
+}
+
+#app-view:not([hidden])::before {
+  display: none;
+}
+
+/* 滚动条预留区用根背景色填充：背景图片不覆盖该区域，只改背景色有效 */
+html {
+  background-color: var(--surface);
+  background-image: none;
+}
