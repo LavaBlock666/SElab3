@@ -1501,3 +1501,24 @@ html {
   height: auto;
   min-height: 80px;
 }
+
+/* 筛选面板按内容高度收尾，避免与左下角刷新按钮重叠 */
+#app-view.screen-browse .filters {
+  align-self: start;
+  height: auto;
+  max-height: 100%;
+}
+
+/* 顶栏背景覆盖到滚动条预留区，消除右上角缝隙 */
+#app-view:not([hidden])::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 64px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 40;
+  pointer-events: none;
+}

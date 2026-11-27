@@ -115,11 +115,8 @@ async function showApp(user) {
   state.categories = await api('/api/categories');
   refreshNotifyDot();
   renderNavigation();
-  if (user.is_admin) {
-    go('audit');
-  } else {
-    go('browse');
-  }
+  // 所有角色登录后统一进入首页
+  go('browse');
 }
 
 function renderNavigation() {
