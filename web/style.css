@@ -1393,3 +1393,65 @@ button {
   height: auto;
   aspect-ratio: 16 / 9;
 }
+
+/* ---------------- 2026-11-27 末轮调整 ---------------- */
+
+/* 固定滚动条占位，避免右侧出现/消失时顶栏元素左右跳动 */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* 浏览页：整个应用高度包含顶栏，主区域占满剩余空间 */
+#app-view.screen-browse {
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app-view.screen-browse .main {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 发布页：允许上下滚动 */
+#app-view.screen-publish {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+#app-view.screen-publish .main {
+  height: auto;
+  display: block;
+  overflow: visible;
+  padding-bottom: 90px;
+}
+
+#app-view.screen-publish .form-card {
+  height: auto;
+}
+
+#app-view.screen-publish .publish-layout {
+  flex: none;
+}
+
+/* 缩小图片预览：右侧固定 16:9，宽度不超过 320px */
+#app-view.screen-publish .upload-preview {
+  max-width: 320px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  margin-top: 0;
+}
+
+html {
+  overflow-y: scroll;
+}
+
+#app-view.screen-publish .desc-group .textarea {
+  flex: none;
+  height: 120px;
+}

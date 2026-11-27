@@ -219,3 +219,13 @@
     表单 `flex` 撑满、描述框自适应、按钮贴底；`.upload-block` 两列 + 16:9 预览。
   - `web/index.html`：静态资源版本号更新。
 - 自测：静态检查通过，页面正常返回；单元测试通过。
+
+## 记录 18：浏览高度、发布滚动与顶栏稳定（本轮）
+
+- 修改：
+  - `web/style.css`：`#app-view.screen-browse` 高度改为 100vh（包含顶栏），主区域 `flex:1`，
+    使分页与左下角刷新对齐并增加商品卡片高度；`#app-view.screen-publish` 恢复滚动、
+    主区域 `display:block`，预览框限制为 320px 的 16:9；`html` 增加
+    `scrollbar-gutter: stable` 与 `overflow-y: scroll`，顶栏右侧元素不随滚动条出现而移动。
+  - `web/index.html`：静态资源版本号更新。
+- 自测：样式检查通过，单元测试通过。
