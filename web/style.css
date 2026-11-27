@@ -1521,6 +1521,8 @@ html.no-scrollbar .topbar {
 
 .login-inner {
   min-height: 560px;
+  position: relative;
+  top: -28px;
 }
 
 .login-title {
