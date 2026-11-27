@@ -1548,3 +1548,20 @@ html {
   background-color: var(--surface);
   background-image: none;
 }
+
+/* 去掉右侧滚动条及其预留区（保留滚动能力，不占宽度、不产生缝隙） */
+html {
+  overflow-y: auto;
+  scrollbar-gutter: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  background-color: var(--bg);
+  background-image: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
+}
