@@ -916,7 +916,7 @@ button {
 .detail-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 8px;
   display: block;
 }
@@ -948,7 +948,7 @@ button {
 .upload-preview img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .cell-item {
@@ -974,7 +974,7 @@ button {
 .cell-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .audit-image {
@@ -988,5 +988,35 @@ button {
 .audit-image img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+}
+
+/* 上传按钮对齐 */
+.upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+/* 固定列宽表格 */
+.table.fixed {
+  table-layout: fixed;
+}
+
+.table.fixed td,
+.table.fixed th {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+/* 信息类提示 */
+.toast.info {
+  background: #e8efff;
+  color: #2f6bff;
+  border: 1px solid #c9d8ff;
 }

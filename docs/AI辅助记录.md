@@ -153,3 +153,20 @@
   - `web/style.css`：图片、缩略图与上传预览样式。
 - 自测：上传 1×1 PNG 后商品返回 `/uploads/IT-xxx.png` 且可访问；审核通过后列表带图片；
   旧数据目录的商品仍能加载；登录响应同时含 sid/user/平铺字段；单元测试通过。
+
+## 记录 13：图片显示、管理员下架与列表细节（本轮）
+
+- 场景：试用中发现的 7 个界面问题。
+- 修改：
+  - `web/app.js`：上传按钮加 `upload-btn` 统一尺寸；图片展示改为按比例缩放；
+    管理员详情页显示“下架并退回草稿”（理由弹窗，调用 `/api/admin/item`），不再显示举报；
+    筛选无结果时清空商品区域并弹出右上角提示；表格加 `colgroup` 固定列宽；
+    详情页记录来源页面，“返回”回到卖家中心/审核/举报等来源。
+  - `web/style.css`：`object-fit: contain`、`.upload-btn`、`.table.fixed`、`.toast.info`。
+  - `src/item_service.cpp`、`include/campus/services.h`：新增 `AdminTakeDown()`，
+    退回草稿、记录理由、作废预约、通知卖家、写操作日志。
+  - `src/web/web_server.cpp`：新增 `POST /api/admin/item`；管理员查看详情不再调用
+    `ViewDetail()`，因此不增加浏览次数；版本号更新。
+  - `web/index.html`：静态资源版本查询串更新。
+- 自测：管理员连续查看同一商品浏览量保持 0；下架后商品状态为 draft、理由已记录、有效预约变 voided；
+  单元测试 16 组 / 96 断言通过。

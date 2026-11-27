@@ -366,7 +366,7 @@ class WebApp {
     const std::string& method = request.method;
 
     if (method == "GET" && path == "/api/version") {
-      return JsonOk("{\"version\":\"2026-11-26.3\"}");
+      return JsonOk("{\"version\":\"2026-11-27.1\"}");
     }
     if (method == "GET" && path == "/api/categories") {
       return CategoriesJson();
@@ -416,6 +416,9 @@ class WebApp {
     }
     if (method == "POST" && path == "/api/audit") {
       return AuditAction(request);
+    }
+    if (method == "POST" && path == "/api/admin/item") {
+      return AdminItemAction(request);
     }
     if (method == "GET" && path == "/api/reports") {
       return ReportList(request);
@@ -497,7 +500,18 @@ class WebApp {
 
   Response ItemDetailJson(const Request& request) {
     std::string id = request.Param("id");
-    Item item = search_service_.ViewDetail(id);
+    auto viewer = CurrentUser(request);
+    // 管理员查看详情不计入浏览次数。
+    Item item;
+    if (viewer && viewer->HasRole(Role::kAdmin)) {
+      auto found = items_.FindById(id);
+      if (!found) {
+        throw DomainError(ErrorCode::kNotFound, "商品不存在");
+      }
+      item = *found;
+    } else {
+      item = search_service_.ViewDetail(id);
+    }
     auto category = categories_.FindById(item.category_id);
     auto seller = users_.FindById(item.seller_id);
     std::ostringstream out;
@@ -751,6 +765,22 @@ class WebApp {
       return JsonOk("{\"message\":\"已驳回并退回草稿\"}");
     }
     return JsonError(400, "未知操作");
+  }
+
+  Response AdminItemAction(const Request& request) {
+    auto user = CurrentUser(request);
+    if (!user || !user->HasRole(Role::kAdmin)) {
+      throw DomainError(ErrorCode::kPermissionDenied, "需要管理员身份");
+    }
+    if (request.Param("action") != "offline") {
+      return JsonError(400, "未知操作");
+    }
+    Item item = item_service_.AdminTakeDown(
+        user->id, request.Param("id"), request.Param("reason"));
+    std::ostringstream out;
+    out << "{\"message\":\"已下架并退回草稿\",\"item\":" << ItemJson(item, "", "")
+        << "}";
+    return JsonOk(out.str());
   }
 
   Response ReportList(const Request& request) {

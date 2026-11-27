@@ -8,3 +8,5 @@ __pycache__/
 data-web/
 server_out.txt
 server_err.txt
+
+data-*/

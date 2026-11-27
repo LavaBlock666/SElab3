@@ -79,6 +79,9 @@ class ItemService {
                    Money new_price);
   Item TakeOffline(const std::string& seller_id, const std::string& item_id,
                    const std::string& reason);
+  // 管理员下架：退回草稿、记录理由、作废有效预约并通知卖家。
+  Item AdminTakeDown(const std::string& admin_id, const std::string& item_id,
+                     const std::string& reason);
   // 设置商品图片地址（仅本人商品，终态不允许修改）。
   Item SetImage(const std::string& seller_id, const std::string& item_id,
                 const std::string& url);

@@ -145,6 +145,33 @@ Item ItemService::Reject(const std::string& admin_id,
   return result;
 }
 
+Item ItemService::AdminTakeDown(const std::string& admin_id,
+                                const std::string& item_id,
+                                const std::string& reason) {
+  if (Trim(reason).empty()) {
+    throw DomainError(ErrorCode::kInvalidArgument, "下架必须填写理由");
+  }
+  User admin = MustFindUser(users_, admin_id);
+  MustHaveRole(admin, Role::kAdmin);
+  Item item = MustFindItem(items_, item_id);
+  if (item.status != ItemStatus::kPublished &&
+      item.status != ItemStatus::kReserved) {
+    throw DomainError(ErrorCode::kStateError, "只有已上架商品可以下架");
+  }
+  if (item.status == ItemStatus::kReserved) {
+    VoidActiveReservation(item_id, "管理员下架商品");
+  }
+  item.reject_reason = Trim(reason);
+  item.status = ItemStatus::kDraft;
+  item.updated_at = clock_.Now();
+  items_.Update(item);
+  internal::WriteLog(logs_, clock_, ids_, admin_id, "管理员下架", "商品", item.id,
+                     item.reject_reason);
+  internal::Notify(notifications_, clock_, ids_, item.seller_id, "商品下架",
+                   "商品《" + item.title + "》被管理员下架：" +
+                       item.reject_reason);
+  return item;
+}
 Item ItemService::UpdatePublished(const std::string& seller_id,
                                   const std::string& item_id,
                                   const std::string& title,

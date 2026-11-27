@@ -1,6 +1,6 @@
 // 校园二手交易系统 —— 前端逻辑（原生 JS，无框架）
 
-const APP_VERSION = '2026-11-26.3';
+const APP_VERSION = '2026-11-27.1';
 
 const state = {
   user: null,
@@ -69,7 +69,8 @@ let toastTimer = null;
 function toast(message, isError = false) {
   const node = $('#toast');
   node.textContent = message;
-  node.className = 'toast' + (isError ? ' error' : '');
+  node.className = 'toast' +
+    (isError === true ? ' error' : isError === 'info' ? ' info' : '');
   node.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { node.hidden = true; }, 2800);
@@ -148,6 +149,9 @@ async function refreshNotifyDot() {
 // ---------------------------------------------------------------- 路由
 
 function go(screen, payload) {
+  if (screen === 'detail' && state.screen && state.screen !== 'detail') {
+    state.detailReturn = state.screen;
+  }
   state.screen = screen;
   if (screen === 'detail') state.detailId = payload;
   renderNavigation();
@@ -239,26 +243,28 @@ async function loadItems() {
   $('#browse-sub').textContent = `共 ${data.total} 件在售商品 · 按${state.filters.sort === 'latest' ? '发布时间' : '价格'}排序`;
   const grid = $('#grid');
   if (!data.items.length) {
-    grid.innerHTML = '<div class="empty">没有符合条件的商品</div>';
-  } else {
-    grid.innerHTML = data.items.map((item) => `
-      <article class="product-card">
-        <div class="thumb">${item.image ? `<img src="${esc(item.image)}" alt="商品图片" />` : '商品图片'}</div>
-        <div class="product-title">${esc(item.title)}</div>
-        <div class="price">¥${esc(item.price)}</div>
-        <div class="product-meta">
-          <span class="chip chip-gray">${esc(item.category)}</span>
-          <span class="chip chip-gray">浏览 ${item.views}</span>
-        </div>
-        <div class="product-foot">
-          ${statusChip(item)}
-          <button class="btn btn-ghost btn-sm" data-detail="${esc(item.id)}">查看详情</button>
-        </div>
-      </article>`).join('');
-    grid.querySelectorAll('[data-detail]').forEach((button) => {
-      button.addEventListener('click', () => go('detail', button.dataset.detail));
-    });
+    grid.innerHTML = '';
+    $('#pager').innerHTML = '';
+    toast('没有符合条件的商品', 'info');
+    return;
   }
+  grid.innerHTML = data.items.map((item) => `
+    <article class="product-card">
+      <div class="thumb">${item.image ? `<img src="${esc(item.image)}" alt="商品图片" />` : '商品图片'}</div>
+      <div class="product-title">${esc(item.title)}</div>
+      <div class="price">¥${esc(item.price)}</div>
+      <div class="product-meta">
+        <span class="chip chip-gray">${esc(item.category)}</span>
+        <span class="chip chip-gray">浏览 ${item.views}</span>
+      </div>
+      <div class="product-foot">
+        ${statusChip(item)}
+        <button class="btn btn-ghost btn-sm" data-detail="${esc(item.id)}">查看详情</button>
+      </div>
+    </article>`).join('');
+  grid.querySelectorAll('[data-detail]').forEach((button) => {
+    button.addEventListener('click', () => go('detail', button.dataset.detail));
+  });
   const pager = $('#pager');
   pager.innerHTML = `
     <span>第 ${data.page} / ${data.total_pages} 页</span>
@@ -278,6 +284,7 @@ async function renderDetail(main) {
   const item = await api('/api/item?id=' + encodeURIComponent(state.detailId));
   state.detail = item;
   const isOwner = state.user && item.seller_id === state.user.id;
+  const isAdmin = !!(state.user && state.user.is_admin);
   const canReserve = state.user && state.user.is_buyer && !isOwner && item.status === 'published';
   let mine = null;
   if (state.user && state.user.is_buyer && !isOwner) {
@@ -323,14 +330,17 @@ async function renderDetail(main) {
             <button class="btn btn-ghost btn-sm" id="btn-myres">前往我的预约</button>
           </div>
         </div>` : ''}
-        <div style="display:flex;gap:12px;margin-top:18px">
+        <div style="display:flex;gap:12px;margin-top:18px;flex-wrap:wrap">
           ${canReserve ? '<button class="btn btn-primary" id="btn-reserve" style="padding:14px 40px">立即预约</button>' : ''}
-          ${!isOwner ? '<button class="btn btn-ghost" id="btn-report" style="padding:14px 28px">举报该商品</button>' : ''}
+          ${!isOwner && !isAdmin ? '<button class="btn btn-ghost" id="btn-report" style="padding:14px 28px">举报该商品</button>' : ''}
+          ${isAdmin && (item.status === 'published' || item.status === 'reserved')
+            ? '<button class="btn btn-danger" id="btn-admin-offline" style="padding:14px 28px">下架并退回草稿</button>' : ''}
         </div>
         ${isOwner ? '<p class="hint">这是你发布的商品。</p>' : ''}
+        ${isAdmin && item.status === 'pending' ? '<p class="hint">该商品正在等待审核，请到“商品审核”页面处理。</p>' : ''}
       </div>
     </div>`;
-  $('#back').addEventListener('click', () => go('browse'));
+  $('#back').addEventListener('click', () => go(state.detailReturn || 'browse'));
   const complete = $('#btn-complete');
   if (complete) {
     complete.addEventListener('click', () => reservationAction(mine.id, 'complete'));
@@ -354,6 +364,44 @@ async function renderDetail(main) {
   const report = $('#btn-report');
   if (report) {
     report.addEventListener('click', () => openReportModal(item));
+  }
+  const adminOffline = $('#btn-admin-offline');
+  if (adminOffline) {
+    adminOffline.addEventListener('click', () => {
+      openModal(`
+        <h3>下架商品</h3>
+        <p style="color:#646a73;font-size:13px;line-height:1.8">
+          下架后商品退回草稿，卖家会收到通知；如已有有效预约会一并作废。
+        </p>
+        <div class="form-group">
+          <label>下架理由（必填）</label>
+          <textarea class="textarea" id="off-reason" placeholder="请说明下架原因"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="off-cancel">取消</button>
+          <button class="btn btn-danger" id="off-submit">确认下架</button>
+        </div>`, (modal) => {
+        modal.querySelector('#off-cancel').addEventListener('click', closeModal);
+        modal.querySelector('#off-submit').addEventListener('click', async () => {
+          const reason = modal.querySelector('#off-reason').value.trim();
+          if (!reason) {
+            toast('请填写下架理由', true);
+            return;
+          }
+          try {
+            await api('/api/admin/item', {
+              method: 'POST',
+              body: { id: item.id, action: 'offline', reason }
+            });
+            closeModal();
+            toast('已下架并退回草稿');
+            renderDetail(main);
+          } catch (error) {
+            toast(error.message, true);
+          }
+        });
+      });
+    });
   }
 }
 
@@ -425,7 +473,8 @@ async function renderReservations(main) {
       <button class="btn btn-ghost btn-sm" id="r-refresh">刷新</button>
     </div>
     <p class="page-sub">卖家确认前可取消；卖家确认后，线下交付完再点“确认完成交易”。</p>
-    ${list.length ? `<table class="table">
+    ${list.length ? `<table class="table fixed">
+      <colgroup><col style="width:40%"><col style="width:14%"><col style="width:24%"><col style="width:22%"></colgroup>
       <thead><tr><th>商品</th><th>状态</th><th>预约时间</th><th>操作</th></tr></thead>
       <tbody>${rows}</tbody></table>` : '<div class="empty">还没有预约记录</div>'}`;
   $('#r-refresh').addEventListener('click', () => renderReservations(main));
@@ -492,10 +541,10 @@ async function renderPublish(main) {
         <div class="form-group">
           <label>商品图片</label>
           <div class="upload-row">
-            <label class="btn btn-ghost" style="cursor:pointer">
+            <label class="btn btn-ghost upload-btn">
               选择图片<input type="file" id="p-image" accept="image/*" hidden />
             </label>
-            <button class="btn btn-ghost" id="p-image-clear" type="button">清除图片</button>
+            <button class="btn btn-ghost upload-btn" id="p-image-clear" type="button">清除图片</button>
             <span style="color:#9aa0a6;font-size:12px">支持 JPG/PNG，自动压缩到 900px 内</span>
           </div>
           <div id="p-preview" class="upload-preview">
@@ -606,7 +655,9 @@ async function renderSeller(main) {
     if (!data.reservations.length) {
       body.innerHTML = '<div class="empty">暂无待确认预约</div>';
     } else {
-      body.innerHTML = `<table class="table"><thead><tr><th>商品</th><th>买家</th><th>预约时间</th><th>操作</th></tr></thead><tbody>
+      body.innerHTML = `<table class="table fixed">
+        <colgroup><col style="width:40%"><col style="width:20%"><col style="width:24%"><col style="width:16%"></colgroup>
+        <thead><tr><th>商品</th><th>买家</th><th>预约时间</th><th>操作</th></tr></thead><tbody>
         ${data.reservations.map((item) => `<tr>
           <td><strong>${esc(item.item_title)}</strong></td>
           <td>${esc(item.buyer)}</td>
@@ -632,7 +683,9 @@ async function renderSeller(main) {
     body.innerHTML = '<div class="empty">还没有发布商品</div>';
     return;
   }
-  body.innerHTML = `<table class="table"><thead><tr><th>商品</th><th>价格</th><th>状态</th><th>浏览</th><th>操作</th></tr></thead><tbody>
+  body.innerHTML = `<table class="table fixed">
+    <colgroup><col style="width:38%"><col style="width:12%"><col style="width:13%"><col style="width:9%"><col style="width:28%"></colgroup>
+    <thead><tr><th>商品</th><th>价格</th><th>状态</th><th>浏览</th><th>操作</th></tr></thead><tbody>
     ${data.items.map((item) => `<tr>
       <td>
         <div class="cell-item">
@@ -698,7 +751,9 @@ function renderAuditList(main) {
     $('#audit-detail').innerHTML = '';
     return;
   }
-  list.innerHTML = `<table class="table"><thead><tr><th>商品</th><th>卖家</th><th>价格</th><th>提交时间</th></tr></thead><tbody>
+  list.innerHTML = `<table class="table fixed">
+    <colgroup><col style="width:38%"><col style="width:20%"><col style="width:14%"><col style="width:28%"></colgroup>
+    <thead><tr><th>商品</th><th>卖家</th><th>价格</th><th>提交时间</th></tr></thead><tbody>
     ${state.audit.map((item, index) => `<tr class="${index === state.auditIndex ? 'selected' : ''}" data-audit="${index}">
       <td><strong>${esc(item.title)}</strong></td>
       <td>${esc(item.seller)}</td>
@@ -895,7 +950,8 @@ async function renderStats(main) {
         <option value="举报" ${state.logTarget === '举报' ? 'selected' : ''}>举报</option>
       </select>
     </div>
-    <table class="table">
+    <table class="table fixed">
+      <colgroup><col style="width:20%"><col style="width:24%"><col style="width:18%"><col style="width:38%"></colgroup>
       <thead><tr><th>时间</th><th>操作人</th><th>操作</th><th>对象</th></tr></thead>
       <tbody>
         ${logs.map((log) => `<tr>
