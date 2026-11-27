@@ -1512,3 +1512,33 @@ html {
 html.no-scrollbar .topbar {
   padding-right: calc(28px + var(--sbw, 15px));
 }
+
+/* 登录页：标题固定，表单切换不移动位置；输入框与占位符字体一致 */
+.login-panel {
+  align-items: center;
+  padding: 40px 0;
+}
+
+.login-inner {
+  min-height: 560px;
+}
+
+.login-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.6;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  font-family: inherit;
+  font-size: 14px;
+  color: #9aa0a6;
+}
+
+.input:-webkit-autofill,
+.input:-webkit-autofill:hover,
+.input:-webkit-autofill:focus {
+  font-family: inherit;
+  font-size: 14px;
+}
