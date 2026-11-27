@@ -1397,10 +1397,6 @@ button {
 /* ---------------- 2026-11-27 末轮调整 ---------------- */
 
 /* 固定滚动条占位，避免右侧出现/消失时顶栏元素左右跳动 */
-html {
-  scrollbar-gutter: stable;
-}
-
 /* 浏览页：整个应用高度包含顶栏，主区域占满剩余空间 */
 #app-view.screen-browse {
   height: 100vh;
@@ -1447,10 +1443,6 @@ html {
   margin-top: 0;
 }
 
-html {
-  overflow-y: scroll;
-}
-
 #app-view.screen-publish .desc-group .textarea {
   flex: none;
   height: 120px;
@@ -1466,10 +1458,6 @@ html {
 }
 
 /* 有滚动条时才显示，但始终预留位置 */
-html {
-  overflow-y: auto;
-}
-
 /* 发布页恢复整屏固定，不滚动 */
 #app-view.screen-publish {
   height: 100vh;
@@ -1509,59 +1497,18 @@ html {
   max-height: 100%;
 }
 
-/* 顶栏背景覆盖到滚动条预留区，消除右上角缝隙 */
-#app-view:not([hidden])::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 64px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  z-index: 40;
-  pointer-events: none;
-}
 
-/* 顶栏背景覆盖滚动条预留区：用根元素背景绘制，保证右上角无缝隙 */
-html {
-  background-color: var(--bg);
-  background-image: linear-gradient(
-    to bottom,
-    var(--surface) 0,
-    var(--surface) 64px,
-    var(--border) 64px,
-    var(--border) 65px,
-    var(--bg) 65px
-  );
-  background-repeat: no-repeat;
-  background-attachment: fixed;
-  background-size: 100% 100%;
-}
 
-#app-view:not([hidden])::before {
-  display: none;
-}
 
 /* 滚动条预留区用根背景色填充：背景图片不覆盖该区域，只改背景色有效 */
-html {
-  background-color: var(--surface);
-  background-image: none;
-}
 
-/* 去掉右侧滚动条及其预留区（保留滚动能力，不占宽度、不产生缝隙） */
+/* 滚动条：页面可滚动时显示；顶栏右侧按滚动条宽度补偿，按钮位置固定 */
 html {
   overflow-y: auto;
   scrollbar-gutter: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  background-color: var(--bg);
-  background-image: none;
+  background: var(--bg);
 }
 
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-  background: transparent;
+html.no-scrollbar .topbar {
+  padding-right: calc(28px + var(--sbw, 15px));
 }

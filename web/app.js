@@ -31,6 +31,28 @@ function resetRegisterForm() {
   }
 }
 
+// 滚动条宽度与顶栏补偿：可滚动页面显示滚动条，按钮位置保持不变。
+function measureScrollbarWidth() {
+  const probe = document.createElement('div');
+  probe.style.cssText =
+    'position:absolute;top:-9999px;left:-9999px;width:100px;height:100px;overflow:scroll';
+  document.body.appendChild(probe);
+  const width = probe.offsetWidth - probe.clientWidth;
+  probe.remove();
+  return width || 15;
+}
+
+function syncScrollbarGutter() {
+  const html = document.documentElement;
+  if (!html.style.getPropertyValue('--sbw')) {
+    html.style.setProperty('--sbw', measureScrollbarWidth() + 'px');
+  }
+  const scrollable = html.scrollHeight > html.clientHeight + 1;
+  html.classList.toggle('no-scrollbar', !scrollable);
+}
+
+window.addEventListener('resize', syncScrollbarGutter);
+
 // 会话号按标签页保存在 sessionStorage，多个标签页可登录不同账号。
 function clearSession() {
   state.sid = '';
@@ -173,7 +195,8 @@ function go(screen, payload) {
     .catch((error) => {
       main.innerHTML = `<div class="empty">${esc(error.message)}</div>`;
       toast(error.message, true);
-    });
+    })
+    .finally(() => requestAnimationFrame(syncScrollbarGutter));
 }
 
 // ---------------------------------------------------------------- 商品检索
@@ -1154,6 +1177,8 @@ $('#btn-notify').addEventListener('click', openNotifications);
     showLogin();
   }
 })();
+
+setTimeout(syncScrollbarGutter, 0);
 
 // 浏览器前进/后退或从往返缓存恢复时，注册表单同样保持为空。
 window.addEventListener('pageshow', () => {

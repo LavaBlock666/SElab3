@@ -414,9 +414,17 @@ void TestLogAndStats() {
 
 void TestPersistence() {
   namespace fs = std::filesystem;
+  // 某些环境的 TEMP 目录不可写，失败时退回当前目录下的测试目录。
+  std::error_code fs_error;
   fs::path dir = fs::temp_directory_path() / "campus_persistence_test";
-  fs::remove_all(dir);
-  fs::create_directories(dir);
+  fs::remove_all(dir, fs_error);
+  fs::create_directories(dir, fs_error);
+  if (fs_error) {
+    dir = fs::current_path() / "campus_persistence_test";
+    fs_error.clear();
+    fs::remove_all(dir, fs_error);
+    fs::create_directories(dir, fs_error);
+  }
   std::string base = dir.string();
 
   {

@@ -245,3 +245,16 @@
 - 修改：`web/style.css` 中 `html` 设为 `scrollbar-gutter: auto`、`scrollbar-width: none`，
   并用 `::-webkit-scrollbar { width: 0 }` 隐藏滚动条；页面仍可滚动，但不占宽度、不产生色带。
 - 自测：无头 Chrome 截图采样右上角与右侧边缘均为纯白/页面底色，无预留区色带；单元测试通过。
+
+## 记录 21：滚动条按需显示与顶栏按钮固定（本轮）
+
+- 需求：可滚动页面显示滚动条；顶栏右侧按钮在有/无滚动条时位置一致；顶栏背景铺满整行。
+- 实现：
+  - `web/style.css`：移除全局隐藏滚动条与预留区规则，`html` 恢复 `overflow-y: auto`、`scrollbar-gutter: auto`；
+    新增 `html.no-scrollbar .topbar { padding-right: calc(28px + var(--sbw, 15px)); }`。
+  - `web/app.js`：新增 `measureScrollbarWidth()` 与 `syncScrollbarGutter()`，按当前页面是否可滚动
+    切换 `no-scrollbar` 类；在每次路由渲染后、窗口 resize 时更新，并用 `--sbw` 记录实际滚动条宽度。
+- 效果：可滚动页面显示浏览器滚动条；无滚动页面顶栏铺满整行且右侧按钮位置不变。
+- 自测（CDP 读取真实布局）：
+  - 无滚动：clientWidth=1416，topbar padding-right=43px；
+  - 有滚动：clientWidth=1401（滚动条 15px），padding-right=28px，顶栏右边缘=1401，按钮右边缘两者一致。
