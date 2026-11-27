@@ -273,7 +273,7 @@ async function loadItems(notifyEmpty = false) {
   }
   grid.innerHTML = data.items.map((item) => `
     <article class="product-card">
-      <div class="thumb">${item.image ? `<img src="${esc(item.image)}" alt="商品图片" />` : '商品图片'}</div>
+      <div class="thumb">${item.image ? `<img src="${esc(item.image)}" alt="商品图片" />` : '暂无图片'}</div>
       <div class="product-title">${esc(item.title)}</div>
       <div class="price">¥${esc(item.price)}</div>
       <div class="product-meta">
@@ -994,6 +994,7 @@ async function renderStats(main) {
 async function openNotifications() {
   try {
     const list = await api('/api/notifications');
+    list.sort((a, b) => String(b.time).localeCompare(String(a.time)));
     openModal(`
       <h3>通知</h3>
       <div style="max-height:340px;overflow:auto">
@@ -1099,6 +1100,7 @@ $('#global-refresh').addEventListener('click', () => {
   if (!state.user) {
     return;
   }
+  refreshNotifyDot();
   if (state.screen === 'detail') {
     go('detail', state.detailId);
   } else {

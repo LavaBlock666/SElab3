@@ -1276,3 +1276,44 @@ button {
 .pager .btn {
   padding: 0 14px;
 }
+
+/* 浏览页卡片：图片高度恢复，文字紧凑 */
+#app-view.screen-browse .thumb {
+  flex: none;
+  height: 140px;
+  min-height: 0;
+}
+
+#app-view.screen-browse .product-card {
+  padding: 10px;
+}
+
+#app-view.screen-browse .product-title {
+  margin: 8px 0 4px;
+  font-size: 14px;
+  -webkit-line-clamp: 1;
+}
+
+#app-view.screen-browse .price {
+  font-size: 18px;
+}
+
+#app-view.screen-browse .product-meta {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+#app-view.screen-browse .product-foot {
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+/* 有悬浮刷新按钮的列表页，底部留出空间 */
+#app-view.screen-seller .main,
+#app-view.screen-audit .main,
+#app-view.screen-reports .main,
+#app-view.screen-stats .main,
+#app-view.screen-reservations .main,
+#app-view.screen-detail .main {
+  padding-bottom: 92px;
+}
