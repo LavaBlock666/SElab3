@@ -1469,3 +1469,35 @@ html {
 html {
   overflow-y: auto;
 }
+
+/* 发布页恢复整屏固定，不滚动 */
+#app-view.screen-publish {
+  height: 100vh;
+  overflow: hidden;
+}
+
+#app-view.screen-publish .main {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 14px;
+}
+
+#app-view.screen-publish .publish-layout {
+  flex: 1;
+  min-height: 0;
+}
+
+#app-view.screen-publish .form-card {
+  height: 100%;
+  overflow: hidden;
+}
+
+#app-view.screen-publish .desc-group .textarea {
+  flex: 1;
+  height: auto;
+  min-height: 80px;
+}
